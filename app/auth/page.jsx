@@ -46,10 +46,7 @@ export default function AuthPage() {
 						<div className="space-y-4">
 							<div className="grid gap-6">
 								<div className="flex flex-col gap-6">
-									<Link
-										href="/api/auth/login"
-										className="w-full"
-									>
+									<Link href="/auth/login" className="w-full">
 										<Button
 											className="w-full bg-wisetwin-darkblue hover:bg-wisetwin-darkblue-light"
 											variant="default"
