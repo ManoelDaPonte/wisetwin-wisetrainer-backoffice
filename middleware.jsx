@@ -10,7 +10,11 @@ export async function middleware(request) {
 	}
 
 	// public routes — no need to check for session
-	if (request.nextUrl.pathname === "/") {
+	if (
+		request.nextUrl.pathname === "/" ||
+		request.nextUrl.pathname === "/auth" ||
+		request.nextUrl.pathname.startsWith("/auth/")
+	) {
 		return authRes;
 	}
 
@@ -19,7 +23,7 @@ export async function middleware(request) {
 
 	// user does not have a session — redirect to login
 	if (!session) {
-		return NextResponse.redirect(`${origin}/auth/login`);
+		return NextResponse.redirect(`${origin}/auth`);
 	}
 
 	return authRes;
