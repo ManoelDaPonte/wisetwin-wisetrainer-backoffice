@@ -61,10 +61,6 @@ export default function LoginForm() {
 
 	return (
 		<Card className="animate-fade-in border-none shadow-xl">
-			<div className="absolute -top-12 left-1/2 flex h-24 w-24 -translate-x-1/2 items-center justify-center rounded-full bg-gradient-to-r from-wisetwin-blue to-wisetwin-darkblue shadow-lg">
-				<LogIn className="h-10 w-10 text-white" />
-			</div>
-
 			<CardHeader className="pt-12 text-center">
 				<CardTitle className="text-2xl font-bold">
 					Administration

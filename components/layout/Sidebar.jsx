@@ -4,15 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-	BarChart3,
-	BookOpen,
-	Users,
-	FileUp,
-	Settings,
-	LogOut,
-	X,
-} from "lucide-react";
+import { BarChart3, BookOpen, Users, FileUp, LogOut, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -49,8 +41,8 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 			}`}
 		>
 			<div className="flex h-16 items-center justify-between border-b px-4">
-				<h1 className="text-xl font-bold text-wisetwin-darkblue">
-					Admin Portal
+				<h1 className="text-xl font-bold text-wisetwin-blue">
+					WiseTwin
 				</h1>
 				<Button
 					onClick={toggleSidebar}
@@ -80,20 +72,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 						</li>
 					))}
 
-					<li className="mt-4 pt-4 border-t">
-						<Link
-							href="/parametres"
-							className={cn(
-								"flex items-center rounded-md px-3 py-2 text-gray-600 hover:bg-primary/10 dark:text-gray-300",
-								pathname === "/parametres" &&
-									"bg-primary/10 font-medium text-primary"
-							)}
-						>
-							<Settings size={20} className="mr-3" />
-							<span>Paramètres</span>
-						</Link>
-					</li>
-					<li>
+					<li className="mt-8 pt-4 border-t">
 						<button
 							onClick={logout}
 							className="flex w-full items-center rounded-md px-3 py-2 text-gray-600 hover:bg-primary/10 dark:text-gray-300"
