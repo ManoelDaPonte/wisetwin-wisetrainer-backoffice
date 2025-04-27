@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 			}`}
 		>
 			<div className="flex h-16 items-center justify-between border-b px-4">
-				<h1 className="text-xl font-bold text-wisetwin-blue">
+				<h1 className="text-xl text-center m-auto font-bold text-wisetwin-blue">
 					WiseTwin
 				</h1>
 				<Button
