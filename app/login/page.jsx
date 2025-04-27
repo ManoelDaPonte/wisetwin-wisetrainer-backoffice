@@ -1,124 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-	Card,
-	CardHeader,
-	CardTitle,
-	CardDescription,
-	CardContent,
-	CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState("");
-	const router = useRouter();
-
-	const handleLogin = async (e) => {
-		e.preventDefault();
-		setLoading(true);
-		setError("");
-
-		try {
-			const response = await fetch("/api/auth/login", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email, password }),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.message || "Erreur de connexion");
-			}
-
-			// Rediriger vers la page d'accueil après connexion réussie
-			router.push("/");
-			router.refresh(); // Rafraîchir la page pour mettre à jour l'état d'authentification
-		} catch (err) {
-			setError(
-				err.message || "Une erreur est survenue lors de la connexion"
-			);
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-background">
-			<Card className="w-full max-w-md animate-fade-in">
-				<CardHeader className="space-y-1 text-center">
-					<CardTitle className="text-2xl font-bold">
-						Administration
-					</CardTitle>
-					<CardDescription>
-						Connectez-vous pour accéder au panneau d'administration
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form onSubmit={handleLogin} className="space-y-4">
-						<div className="space-y-2">
-							<label
-								htmlFor="email"
-								className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-							>
-								Email
-							</label>
-							<input
-								id="email"
-								type="email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-								placeholder="admin@exemple.com"
-								required
-							/>
-						</div>
-						<div className="space-y-2">
-							<label
-								htmlFor="password"
-								className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-							>
-								Mot de passe
-							</label>
-							<input
-								id="password"
-								type="password"
-								value={password}
-								onChange={(e) => setPassword(e.target.value)}
-								className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-								required
-							/>
-						</div>
-						{error && (
-							<div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-								{error}
-							</div>
-						)}
-						<Button
-							type="submit"
-							className="w-full"
-							disabled={loading}
-						>
-							{loading ? (
-								<>
-									<div className="spinner mr-2" />
-									Connexion en cours...
-								</>
-							) : (
-								"Se connecter"
-							)}
-						</Button>
-					</form>
-				</CardContent>
-			</Card>
+		<div className="flex min-h-screen flex-col bg-gradient-to-br from-wisetwin-darkblue to-wisetwin-blue/80 dark:from-wisetwin-darkblue/80 dark:to-wisetwin-blue/40">
+			{/* Header - Optional Logo */}
+			<div className="container mx-auto flex h-20 items-center px-4">
+				<div className="text-2xl font-bold text-white">WiseTwin</div>
+			</div>
+
+			<div className="flex flex-1 items-center justify-center p-4">
+				<div className="w-full max-w-md">
+					<LoginForm />
+
+					<p className="mt-8 text-center text-sm text-white/70">
+						© {new Date().getFullYear()} WiseTwin. Tous droits
+						réservés.
+					</p>
+				</div>
+			</div>
 		</div>
 	);
 }

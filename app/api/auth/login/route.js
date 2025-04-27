@@ -26,8 +26,10 @@ export async function POST(request) {
       .setExpirationTime('8h') // Le token expire après 8 heures
       .sign(secret);
 
+    const cookieStore = await cookies();
+
     // Définir le cookie
-    cookies().set('admin_token', token, {
+    cookieStore.set('admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

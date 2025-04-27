@@ -1,88 +1,39 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import AdminLayout from "@/components/layout/AdminLayout";
+import StatsCards from "@/components/dashboard/StatsCards";
+import RecentActivity from "@/components/dashboard/RecentActivity";
+import QuickActions from "@/components/dashboard/QuickActions";
 
-export default function HomePage() {
-	const { isAuthenticated, loading, logout } = useAuth();
+export default function DashboardPage() {
+	const { loading } = useAuth();
 
 	if (loading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-background">
-				<div className="spinner" />
-				<span className="ml-2">Chargement...</span>
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<span className="ml-2 text-lg font-medium">Chargement...</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col bg-background">
-			{/* En-tête */}
-			<header className="border-b">
-				<div className="container flex h-16 items-center justify-between">
-					<h1 className="text-xl font-semibold">
-						Tableau de bord d'administration
-					</h1>
-					<Button variant="ghost" onClick={logout}>
-						Déconnexion
-					</Button>
-				</div>
-			</header>
+		<AdminLayout>
+			<div className="mb-6">
+				<h1 className="text-2xl font-bold">Tableau de bord</h1>
+				<p className="text-muted-foreground">
+					Bienvenue sur votre portail d'administration
+				</p>
+			</div>
 
-			{/* Contenu principal */}
-			<main className="container flex-1 py-6">
-				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{/* Carte - Gestion des formations */}
-					<div className="rounded-lg border bg-card p-6 hover-lift shadow-sm transition-all">
-						<h3 className="mb-2 text-lg font-medium">
-							Gestion des formations
-						</h3>
-						<p className="text-sm text-muted-foreground">
-							Créez, modifiez et gérez les formations Unity et
-							leurs métadonnées.
-						</p>
-						<Button className="mt-4" variant="outline">
-							Accéder
-						</Button>
-					</div>
+			<StatsCards />
 
-					{/* Carte - Upload des builds */}
-					<div className="rounded-lg border bg-card p-6 hover-lift shadow-sm transition-all">
-						<h3 className="mb-2 text-lg font-medium">
-							Upload des builds
-						</h3>
-						<p className="text-sm text-muted-foreground">
-							Téléversez et gérez les builds Unity WebGL sur Azure
-							Blob Storage.
-						</p>
-						<Button className="mt-4" variant="outline">
-							Accéder
-						</Button>
-					</div>
-
-					{/* Carte - Gestion des organisations */}
-					<div className="rounded-lg border bg-card p-6 hover-lift shadow-sm transition-all">
-						<h3 className="mb-2 text-lg font-medium">
-							Gestion des organisations
-						</h3>
-						<p className="text-sm text-muted-foreground">
-							Administrez les organisations et leurs accès aux
-							formations.
-						</p>
-						<Button className="mt-4" variant="outline">
-							Accéder
-						</Button>
-					</div>
-				</div>
-			</main>
-
-			{/* Pied de page */}
-			<footer className="border-t py-4">
-				<div className="container text-center text-sm text-muted-foreground">
-					Administration - © {new Date().getFullYear()} Votre
-					Entreprise
-				</div>
-			</footer>
-		</div>
+			<div className="mt-6 grid gap-6 lg:grid-cols-2">
+				<RecentActivity />
+				<QuickActions />
+			</div>
+		</AdminLayout>
 	);
 }
