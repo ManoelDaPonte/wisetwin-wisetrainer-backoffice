@@ -1,10 +1,19 @@
+// components/layout/Sidebar.jsx (modifié)
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { BarChart3, BookOpen, Users, FileUp, LogOut, X } from "lucide-react";
+import {
+	BarChart3,
+	BookOpen,
+	Users,
+	FileUp,
+	LogOut,
+	X,
+	Link2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -27,6 +36,11 @@ const navItems = [
 		title: "Builds Unity",
 		href: "/builds",
 		icon: <FileUp size={20} />,
+	},
+	{
+		title: "Associations",
+		href: "/associations",
+		icon: <Link2 size={20} />,
 	},
 ];
 

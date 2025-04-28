@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FormationViewDetails from "@/components/formations/FormationViewDetails";
 import FormationContentsList from "@/components/formations/FormationContentsList";
+import BuildSelector from "@/components/formations/BuildSelector";
 
 export default function ViewFormationPage() {
 	const params = useParams();
@@ -20,31 +21,31 @@ export default function ViewFormationPage() {
 	useEffect(() => {
 		if (!params.id) return;
 
-		const fetchFormation = async () => {
-			setIsLoading(true);
-			setError(null);
-
-			try {
-				const response = await fetch(`/api/formations/${params.id}`);
-
-				if (!response.ok) {
-					throw new Error(
-						"Erreur lors de la récupération de la formation"
-					);
-				}
-
-				const data = await response.json();
-				setFormation(data.formation);
-			} catch (err) {
-				console.error("Erreur:", err);
-				setError(err.message);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
 		fetchFormation();
 	}, [params.id]);
+
+	const fetchFormation = async () => {
+		setIsLoading(true);
+		setError(null);
+
+		try {
+			const response = await fetch(`/api/formations/${params.id}`);
+
+			if (!response.ok) {
+				throw new Error(
+					"Erreur lors de la récupération de la formation"
+				);
+			}
+
+			const data = await response.json();
+			setFormation(data.formation);
+		} catch (err) {
+			console.error("Erreur:", err);
+			setError(err.message);
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
 	const handleBack = () => {
 		router.push("/formations");
@@ -52,6 +53,13 @@ export default function ViewFormationPage() {
 
 	const handleEdit = () => {
 		router.push(`/formations/edit/${params.id}`);
+	};
+
+	const handleBuildAssigned = (buildId) => {
+		setFormation((prev) => ({
+			...prev,
+			buildId: buildId,
+		}));
 	};
 
 	return (
@@ -83,6 +91,19 @@ export default function ViewFormationPage() {
 				) : formation ? (
 					<div className="space-y-8">
 						<FormationViewDetails formation={formation} />
+
+						{/* Intégration du sélecteur de build */}
+						<div className="border rounded-lg p-6 bg-card">
+							<h2 className="text-xl font-semibold mb-4">
+								Association aux builds Unity
+							</h2>
+							<BuildSelector
+								formationId={formation.id}
+								currentBuildId={formation.buildId}
+								onAssign={handleBuildAssigned}
+							/>
+						</div>
+
 						<FormationContentsList contents={formation.contents} />
 					</div>
 				) : (
