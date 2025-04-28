@@ -1,12 +1,17 @@
 // hooks/useBuilds.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export function useBuilds(container = null) {
 	const [builds, setBuilds] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [refreshCounter, setRefreshCounter] = useState(0);
+
+	const refreshBuilds = useCallback(() => {
+		setRefreshCounter((prev) => prev + 1);
+	}, []);
 
 	useEffect(() => {
 		async function fetchBuilds() {
@@ -37,15 +42,20 @@ export function useBuilds(container = null) {
 		}
 
 		fetchBuilds();
-	}, [container]);
+	}, [container, refreshCounter]);
 
-	return { builds, loading, error };
+	return { builds, loading, error, refreshBuilds };
 }
 
 export function useBuildDetails(container, blob) {
 	const [build, setBuild] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [refreshCounter, setRefreshCounter] = useState(0);
+
+	const refreshBuildDetails = useCallback(() => {
+		setRefreshCounter((prev) => prev + 1);
+	}, []);
 
 	useEffect(() => {
 		if (!container || !blob) {
@@ -80,7 +90,7 @@ export function useBuildDetails(container, blob) {
 		}
 
 		fetchBuildDetails();
-	}, [container, blob]);
+	}, [container, blob, refreshCounter]);
 
-	return { build, loading, error };
+	return { build, loading, error, refreshBuildDetails };
 }
