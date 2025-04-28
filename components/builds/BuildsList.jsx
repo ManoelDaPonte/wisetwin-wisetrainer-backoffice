@@ -11,6 +11,11 @@ import {
 	FileCode,
 	CheckCircle,
 	XCircle,
+	AlertCircle,
+	Loader2,
+	Files,
+	ChevronDown,
+	ChevronUp,
 } from "lucide-react";
 import {
 	Card,
@@ -31,65 +36,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Exemple de données (à remplacer par des données réelles)
-const builds = [
-	{
-		id: "1",
-		name: "Sécurité industrielle v1.2",
-		version: "1.2",
-		description: "Build officiel pour la formation sécurité industrielle",
-		size: "45.8 MB",
-		uploadDate: "15/04/2025",
-		status: "published",
-		uploadProgress: 100,
-		associatedOrganizations: 3,
-	},
-	{
-		id: "2",
-		name: "Gestion de crise v2.0",
-		version: "2.0",
-		description: "Nouveau build avec amélioration des interactions",
-		size: "62.3 MB",
-		uploadDate: "20/04/2025",
-		status: "published",
-		uploadProgress: 100,
-		associatedOrganizations: 5,
-	},
-	{
-		id: "3",
-		name: "Prévention des risques v1.5",
-		version: "1.5",
-		description: "Mise à jour du système de questions",
-		size: "38.7 MB",
-		uploadDate: "22/04/2025",
-		status: "uploading",
-		uploadProgress: 65,
-		associatedOrganizations: 0,
-	},
-	{
-		id: "4",
-		name: "Équipements de protection v1.0",
-		version: "1.0",
-		description: "Première version du module de formation",
-		size: "52.1 MB",
-		uploadDate: "10/04/2025",
-		status: "error",
-		uploadProgress: 100,
-		associatedOrganizations: 0,
-	},
-	{
-		id: "5",
-		name: "Communication d'équipe v2.1",
-		version: "2.1",
-		description: "Optimisation des performances et corrections de bugs",
-		size: "41.9 MB",
-		uploadDate: "18/04/2025",
-		status: "published",
-		uploadProgress: 100,
-		associatedOrganizations: 8,
-	},
-];
+import { useBuilds } from "@/hooks/useBuilds";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Mapping des statuts avec leurs configurations visuelles
 const statusConfig = {
@@ -110,7 +58,56 @@ const statusConfig = {
 	},
 };
 
-export default function BuildsList() {
+export default function BuildsList({ container = null }) {
+	const { builds, loading, error } = useBuilds(container);
+	const [expandedBuilds, setExpandedBuilds] = useState({});
+
+	// Fonction pour basculer l'état d'expansion d'un build
+	const toggleBuildExpansion = (buildId) => {
+		setExpandedBuilds((prev) => ({
+			...prev,
+			[buildId]: !prev[buildId],
+		}));
+	};
+
+	if (loading) {
+		return (
+			<div className="flex justify-center items-center py-12">
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<span className="ml-2 text-lg">Chargement des builds...</span>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<Alert variant="destructive" className="my-4">
+				<AlertCircle className="h-4 w-4" />
+				<AlertDescription>
+					Erreur lors du chargement des builds: {error}
+				</AlertDescription>
+			</Alert>
+		);
+	}
+
+	if (builds.length === 0) {
+		return (
+			<div className="border rounded-md p-8 text-center">
+				<FileCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+				<h3 className="text-lg font-medium mb-2">Aucun build trouvé</h3>
+				<p className="text-muted-foreground mb-4">
+					{container
+						? `Aucun build n'est disponible dans le container "${container}".`
+						: "Vous n'avez pas encore uploadé de builds Unity."}
+				</p>
+				<Button>
+					<Cloud className="mr-2 h-4 w-4" />
+					Uploader un build
+				</Button>
+			</div>
+		);
+	}
+
 	return (
 		<div className="space-y-4">
 			{builds.map((build) => (
@@ -128,8 +125,14 @@ export default function BuildsList() {
 									</CardTitle>
 								</div>
 								<CardDescription className="line-clamp-2">
-									{build.description}
+									{build.description ||
+										"Aucune description fournie"}
 								</CardDescription>
+								{build.fullPath && (
+									<p className="text-xs text-muted-foreground">
+										Chemin: {build.fullPath}
+									</p>
+								)}
 							</div>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -147,7 +150,14 @@ export default function BuildsList() {
 												<Eye className="mr-2 h-4 w-4" />
 												<span>Prévisualiser</span>
 											</DropdownMenuItem>
-											<DropdownMenuItem>
+											<DropdownMenuItem
+												onClick={() =>
+													window.open(
+														build.url,
+														"_blank"
+													)
+												}
+											>
 												<Download className="mr-2 h-4 w-4" />
 												<span>Télécharger</span>
 											</DropdownMenuItem>
@@ -167,17 +177,35 @@ export default function BuildsList() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</div>
-						<div className="mt-1 flex items-center space-x-2">
+						<div className="mt-1 flex items-center space-x-2 flex-wrap gap-y-2">
 							<Badge
 								variant="outline"
-								className={statusConfig[build.status].color}
+								className={
+									statusConfig[build.status || "published"]
+										.color
+								}
 							>
 								<span className="mr-1">
-									{statusConfig[build.status].icon}
+									{
+										statusConfig[
+											build.status || "published"
+										].icon
+									}
 								</span>
-								{statusConfig[build.status].label}
+								{
+									statusConfig[build.status || "published"]
+										.label
+								}
 							</Badge>
 							<Badge variant="outline">v{build.version}</Badge>
+							{build.containerName && (
+								<Badge
+									variant="outline"
+									className="bg-wisetwin-blue/10 text-wisetwin-blue"
+								>
+									{build.containerName}
+								</Badge>
+							)}
 						</div>
 					</CardHeader>
 					<CardContent>
@@ -196,7 +224,7 @@ export default function BuildsList() {
 						<div className="flex items-center justify-between py-1">
 							<div className="flex items-center">
 								<Package className="mr-2 h-4 w-4 text-muted-foreground" />
-								<span>{build.size}</span>
+								<span>{build.totalSize || build.size}</span>
 							</div>
 							<div className="flex items-center">
 								<Tag className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -214,6 +242,63 @@ export default function BuildsList() {
 								</span>
 							</div>
 						</div>
+
+						{/* Affichage des fichiers du build */}
+						{build.files && build.files.length > 0 && (
+							<div className="mt-2">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() =>
+										toggleBuildExpansion(build.id)
+									}
+									className="flex items-center text-sm text-muted-foreground p-0 h-auto"
+								>
+									<Files className="mr-1 h-3 w-3" />
+									<span className="mr-1">
+										{build.files.length} fichiers
+									</span>
+									{expandedBuilds[build.id] ? (
+										<ChevronUp className="h-3 w-3" />
+									) : (
+										<ChevronDown className="h-3 w-3" />
+									)}
+								</Button>
+
+								{expandedBuilds[build.id] && (
+									<div className="mt-2 text-sm border rounded-md divide-y">
+										{build.files.map((file, index) => (
+											<div
+												key={index}
+												className="p-2 flex justify-between items-center"
+											>
+												<span className="truncate max-w-[60%]">
+													{file.name.split("/").pop()}
+												</span>
+												<div className="flex items-center gap-3">
+													<span className="text-xs text-muted-foreground">
+														{file.size}
+													</span>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-6 w-6"
+														onClick={() =>
+															window.open(
+																file.url,
+																"_blank"
+															)
+														}
+													>
+														<Download className="h-3 w-3" />
+													</Button>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						)}
 					</CardContent>
 					<CardFooter className="border-t bg-muted/30 py-2 text-sm text-muted-foreground">
 						<div className="flex items-center">

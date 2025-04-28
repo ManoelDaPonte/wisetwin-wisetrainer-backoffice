@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "./Sidebar";
+import Sidebar from "@/components/layout/Sidebar";
 
 export default function AdminLayout({ children }) {
 	const [sidebarOpen, setSidebarOpen] = useState(true);
