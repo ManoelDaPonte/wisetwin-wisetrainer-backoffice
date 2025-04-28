@@ -1,12 +1,13 @@
+// app/organizations/page.jsx
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import OrganisationsHeader from "@/components/organisations/OrganisationsHeader";
-import OrganisationsGrid from "@/components/organisations/OrganisationsGrid";
+import OrganizationsHeader from "@/components/organizations/OrganizationsHeader";
+import OrganizationsList from "@/components/organizations/OrganizationsList";
 
-export default function OrganisationsPage() {
+export default function OrganizationsPage() {
 	const { loading } = useAuth();
 
 	if (loading) {
@@ -20,8 +21,8 @@ export default function OrganisationsPage() {
 
 	return (
 		<AdminLayout>
-			<OrganisationsHeader />
-			<OrganisationsGrid />
+			<OrganizationsHeader />
+			<OrganizationsList />
 		</AdminLayout>
 	);
 }

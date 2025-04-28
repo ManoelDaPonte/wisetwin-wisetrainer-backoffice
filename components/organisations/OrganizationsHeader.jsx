@@ -1,11 +1,15 @@
-import { PlusCircle, Search, LayoutGrid, List } from "lucide-react";
+// components/organizations/OrganizationsHeader.jsx
+import { PlusCircle, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export default function OrganisationsHeader() {
+export default function OrganizationsHeader({
+	searchQuery = "",
+	onSearchChange = () => {},
+	onCreateClick = () => {},
+}) {
 	return (
-		<div className="mb-6 space-y-4">
+		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-bold">Organisations</h1>
@@ -13,7 +17,7 @@ export default function OrganisationsHeader() {
 						Gérez les organisations et leurs accès
 					</p>
 				</div>
-				<Button>
+				<Button onClick={onCreateClick}>
 					<PlusCircle className="mr-2 h-4 w-4" />
 					Nouvelle organisation
 				</Button>
@@ -26,17 +30,11 @@ export default function OrganisationsHeader() {
 						type="search"
 						placeholder="Rechercher des organisations..."
 						className="pl-8"
+						value={searchQuery}
+						onChange={(e) => onSearchChange(e.target.value)}
 					/>
 				</div>
 				<Button variant="outline">Filtres</Button>
-				<ToggleGroup type="single" defaultValue="grid">
-					<ToggleGroupItem value="grid">
-						<LayoutGrid className="h-4 w-4" />
-					</ToggleGroupItem>
-					<ToggleGroupItem value="list">
-						<List className="h-4 w-4" />
-					</ToggleGroupItem>
-				</ToggleGroup>
 			</div>
 		</div>
 	);
