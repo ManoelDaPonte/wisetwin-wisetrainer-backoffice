@@ -6,6 +6,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import StatsCards from "@/components/dashboard/StatsCards";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import QuickActions from "@/components/dashboard/QuickActions";
+import FormationsStats from "@/components/dashboard/FormationsStats";
 
 export default function DashboardPage() {
 	const { loading } = useAuth();
@@ -30,9 +31,13 @@ export default function DashboardPage() {
 
 			<StatsCards />
 
-			<div className="mt-6 grid gap-6 lg:grid-cols-2">
-				<RecentActivity />
-				<QuickActions />
+			<div className="mt-6 space-y-6">
+				<FormationsStats />
+
+				<div className="grid gap-6 lg:grid-cols-2">
+					<RecentActivity />
+					<QuickActions />
+				</div>
 			</div>
 		</AdminLayout>
 	);

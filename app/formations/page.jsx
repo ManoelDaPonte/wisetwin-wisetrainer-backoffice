@@ -1,10 +1,11 @@
+// app/formations/page.jsx
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import FormationsTable from "@/components/formations/FormationsTable";
-import FormationsHeader from "@/components/formations/FormationsHeader";
+import FormationsContainer from "@/components/formations/FormationsContainer";
 
 export default function FormationsPage() {
 	const { loading } = useAuth();
@@ -20,8 +21,7 @@ export default function FormationsPage() {
 
 	return (
 		<AdminLayout>
-			<FormationsHeader />
-			<FormationsTable />
+			<FormationsContainer />
 		</AdminLayout>
 	);
 }

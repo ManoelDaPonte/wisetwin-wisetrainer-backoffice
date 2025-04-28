@@ -323,3 +323,82 @@ model TagTraining {
 
     @@unique([tagId, courseId])
 }
+
+model FormationContent {
+    id               String              @id @default(uuid())
+    contentId        String // Identifiant externe (ex: "controller-guide")
+    formationId      String // Référence à la formation parente
+    formation        Formation           @relation(fields: [formationId], references: [id], onDelete: Cascade)
+    title            String // Titre du module
+    description      String // Description du module
+    type             String              @default("guide") // "guide" ou "question"
+    order            Int // Ordre d'affichage dans la formation
+    educationalTitle String? // Titre du contenu éducatif (optional)
+    educationalText  String?             @db.Text // Contenu éducatif (JSON ou texte formaté)
+    imageUrl         String? // URL de l'image du module
+    createdAt        DateTime            @default(now())
+    updatedAt        DateTime            @updatedAt
+    // Relations
+    steps            FormationStep[] // Étapes guidées (pour type=guide)
+    questions        FormationQuestion[] // Questions (pour type=question)
+}
+
+// Étape guidée dans une séquence (pour les formations de type "guide")
+model FormationStep {
+    id              String           @id @default(uuid())
+    stepId          String // Identifiant externe (ex: "step-1")
+    contentId       String // Référence au module parent
+    content         FormationContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+    title           String // Titre de l'étape
+    instruction     String // Instruction pour l'utilisateur
+    validationEvent String // Événement qui valide l'étape
+    validationType  String           @default("3d") // Type de validation
+    hint            String? // Indice (optionnel)
+    createdAt       DateTime         @default(now())
+    updatedAt       DateTime         @updatedAt
+}
+
+// Question pour les modules de formation de type "question"
+model FormationQuestion {
+    id         String            @id @default(uuid())
+    questionId String // Identifiant externe (ex: "pressure-risk-q1")
+    contentId  String // Référence au module parent
+    content    FormationContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+    text       String // Texte de la question
+    type       String            @default("SINGLE") // Type de question: SINGLE ou MULTIPLE
+    image      String? // URL de l'image (optionnel)
+    createdAt  DateTime          @default(now())
+    updatedAt  DateTime          @updatedAt
+    // Relations
+    options    FormationOption[] // Options de réponse
+}
+
+// Option de réponse pour une question
+model FormationOption {
+    id         String            @id @default(uuid())
+    optionId   String // Identifiant externe (ex: "pr-q1-o1")
+    questionId String // Référence à la question parente
+    question   FormationQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    text       String // Texte de l'option
+    isCorrect  Boolean           @default(false) // Indique si l'option est correcte
+    createdAt  DateTime          @default(now())
+    updatedAt  DateTime          @updatedAt
+}
+
+// Formation: entité principale
+model Formation {
+    id            String             @id @default(uuid())
+    formationId   String             @unique // Identifiant externe (ex: "LOTO_Acces_Zone_Robot")
+    name          String // Nom de la formation
+    description   String // Description de la formation
+    imageUrl      String? // URL de l'image
+    category      String // Catégorie (ex: "Sécurité")
+    difficulty    String // Difficulté (ex: "Intermédiaire")
+    duration      String // Durée estimée (ex: "45 min")
+    objectMapping Json? // Mapping des objets 3D (JSON)
+    buildId       String? // Référence au build Unity (optionnel)
+    createdAt     DateTime           @default(now())
+    updatedAt     DateTime           @updatedAt
+    // Relations
+    contents      FormationContent[] // Modules de la formation
+}
