@@ -32,16 +32,6 @@ const navItems = [
 		href: "/organizations",
 		icon: <Users size={20} />,
 	},
-	{
-		title: "Builds Unity",
-		href: "/builds",
-		icon: <FileUp size={20} />,
-	},
-	{
-		title: "Associations",
-		href: "/associations",
-		icon: <Link2 size={20} />,
-	},
 ];
 
 export default function Sidebar({ isOpen, toggleSidebar }) {

@@ -20,7 +20,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import BuildsList from "@/components/builds/BuildsList";
 import OrganizationBuildUploader from "./OrganizationBuildUploader";
 
 export default function OrganizationBuilds({ organization }) {
