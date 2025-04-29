@@ -1,18 +1,20 @@
-// components/organizations/OrganizationBuilds.jsx
+//components/organizations/OrganizationBuilds.jsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { Upload, Loader2, AlertTriangle, Package } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Upload, Loader2, AlertTriangle, Package, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import {
 	Card,
 	CardContent,
@@ -20,13 +22,16 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import OrganizationBuildUploader from "./OrganizationBuildUploader";
+import { Badge } from "@/components/ui/badge";
 
-export default function OrganizationBuilds({ organization }) {
+export default function OrganizationBuilds({
+	organization,
+	refreshTrigger = 0,
+}) {
+	const router = useRouter();
 	const [builds, setBuilds] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filteredBuilds, setFilteredBuilds] = useState([]);
 
@@ -36,7 +41,7 @@ export default function OrganizationBuilds({ organization }) {
 
 	useEffect(() => {
 		fetchOrganizationBuilds();
-	}, [organization.id]);
+	}, [organization.id, refreshTrigger]);
 
 	useEffect(() => {
 		if (builds.length > 0 && searchQuery.trim() !== "") {
@@ -44,8 +49,9 @@ export default function OrganizationBuilds({ organization }) {
 			const filtered = builds.filter(
 				(build) =>
 					build.name.toLowerCase().includes(query) ||
-					build.description.toLowerCase().includes(query) ||
-					build.version.toLowerCase().includes(query)
+					build.version.toLowerCase().includes(query) ||
+					(build.description &&
+						build.description.toLowerCase().includes(query))
 			);
 			setFilteredBuilds(filtered);
 		} else {
@@ -67,7 +73,41 @@ export default function OrganizationBuilds({ organization }) {
 			}
 
 			const data = await response.json();
-			setBuilds(data.builds || []);
+
+			// Ajouter le nombre de formations associées à chaque build
+			const buildsWithCounts = await Promise.all(
+				data.builds.map(async (build) => {
+					try {
+						const formationsResponse = await fetch(
+							`/api/builds/${build.id}/formations`
+						);
+						if (formationsResponse.ok) {
+							const formationsData =
+								await formationsResponse.json();
+							return {
+								...build,
+								formationsCount:
+									formationsData.formations?.length || 0,
+							};
+						}
+						return {
+							...build,
+							formationsCount: 0,
+						};
+					} catch (error) {
+						console.error(
+							`Erreur pour le build ${build.id}:`,
+							error
+						);
+						return {
+							...build,
+							formationsCount: 0,
+						};
+					}
+				})
+			);
+
+			setBuilds(buildsWithCounts || []);
 		} catch (err) {
 			console.error("Erreur:", err);
 			setError(err.message);
@@ -76,113 +116,120 @@ export default function OrganizationBuilds({ organization }) {
 		}
 	};
 
-	const handleUploadSuccess = (newBuild) => {
-		setBuilds((prev) => [newBuild, ...prev]);
-		setIsUploadModalOpen(false);
-	};
-
-	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<h2 className="text-2xl font-bold">
-						Builds de l'organisation
-					</h2>
-					<p className="text-muted-foreground">
-						Gérez les builds Unity spécifiques à cette organisation
-					</p>
-				</div>
-				<Button onClick={() => setIsUploadModalOpen(true)}>
-					<Upload className="mr-2 h-4 w-4" />
-					Uploader un build
-				</Button>
+	if (isLoading) {
+		return (
+			<div className="flex justify-center py-8">
+				<Loader2 className="h-8 w-8 animate-spin text-primary" />
 			</div>
+		);
+	}
 
-			{error && (
-				<Alert variant="destructive">
-					<AlertTriangle className="h-4 w-4" />
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
+	if (error) {
+		return (
+			<Alert variant="destructive">
+				<AlertTriangle className="h-4 w-4" />
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		);
+	}
 
+	if (builds.length === 0) {
+		return (
 			<Card>
 				<CardHeader>
-					<CardTitle>Container Azure</CardTitle>
+					<CardTitle>Builds de l'organisation</CardTitle>
 					<CardDescription>
-						Tous les builds sont stockés dans ce container
+						Cette organisation n'a pas encore de builds
 					</CardDescription>
 				</CardHeader>
-				<CardContent>
-					<div className="flex items-center gap-4">
-						<Package className="h-10 w-10 p-2 bg-primary/10 rounded-lg text-primary" />
-						<div>
-							<h3 className="font-medium">{containerName}</h3>
-							<p className="text-sm text-muted-foreground">
-								{organization.azureContainer
-									? "Container personnalisé de l'organisation"
-									: "Container par défaut généré"}
-							</p>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
-
-			<div className="relative flex-1 min-w-[200px] mb-4">
-				<Input
-					type="search"
-					placeholder="Rechercher des builds..."
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-				/>
-			</div>
-
-			{isLoading ? (
-				<div className="flex justify-center py-8">
-					<Loader2 className="h-8 w-8 animate-spin text-primary" />
-				</div>
-			) : filteredBuilds.length > 0 ? (
-				<BuildsList
-					builds={filteredBuilds}
-					onRefresh={fetchOrganizationBuilds}
-				/>
-			) : (
-				<div className="text-center p-12 border rounded-md">
+				<CardContent className="py-8 text-center">
 					<Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-					<h3 className="text-lg font-medium mb-2">
-						Aucun build trouvé
-					</h3>
 					<p className="text-muted-foreground mb-4">
-						Cette organisation n'a pas encore de builds Unity.
-						Uploadez un build pour commencer.
+						Aucun build trouvé. Commencez par uploader un build.
 					</p>
-					<Button onClick={() => setIsUploadModalOpen(true)}>
+					<Button onClick={() => router.reload()}>
 						<Upload className="mr-2 h-4 w-4" />
 						Uploader un build
 					</Button>
-				</div>
-			)}
+				</CardContent>
+			</Card>
+		);
+	}
 
-			{/* Modal d'upload de build */}
-			<Dialog
-				open={isUploadModalOpen}
-				onOpenChange={setIsUploadModalOpen}
-			>
-				<DialogContent className="sm:max-w-lg">
-					<DialogHeader>
-						<DialogTitle>Uploader un build Unity</DialogTitle>
-						<DialogDescription>
-							Ajoutez un nouveau build Unity pour cette
-							organisation
-						</DialogDescription>
-					</DialogHeader>
-					<OrganizationBuildUploader
-						organizationId={organization.id}
-						containerName={containerName}
-						onClose={() => setIsUploadModalOpen(false)}
-						onSuccess={handleUploadSuccess}
-					/>
-				</DialogContent>
-			</Dialog>
-		</div>
+	return (
+		<Card>
+			<CardHeader>
+				<div className="flex items-center justify-between">
+					<div>
+						<CardTitle>
+							Liste des builds ({builds.length})
+						</CardTitle>
+						<CardDescription>
+							Tous les builds de cette organisation
+						</CardDescription>
+					</div>
+					<div className="w-64">
+						<Input
+							type="search"
+							placeholder="Rechercher..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+						/>
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Nom</TableHead>
+							<TableHead>Version</TableHead>
+							<TableHead>Date d'upload</TableHead>
+							<TableHead>Taille</TableHead>
+							<TableHead>Formations</TableHead>
+							<TableHead className="text-right">
+								Actions
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{filteredBuilds.map((build) => (
+							<TableRow key={build.id}>
+								<TableCell>{build.name}</TableCell>
+								<TableCell>v{build.version}</TableCell>
+								<TableCell>{build.uploadDate}</TableCell>
+								<TableCell>{build.totalSize}</TableCell>
+								<TableCell>
+									{build.formationsCount > 0 ? (
+										<Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+											{build.formationsCount} associée(s)
+										</Badge>
+									) : (
+										<Badge variant="outline">
+											Non associé
+										</Badge>
+									)}
+								</TableCell>
+								<TableCell className="text-right">
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() =>
+											(window.location.href = `/organizations/${
+												organization.id
+											}/builds/${encodeURIComponent(
+												build.id
+											)}`)
+										}
+									>
+										Détails
+									</Button>
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</CardContent>
+		</Card>
 	);
 }

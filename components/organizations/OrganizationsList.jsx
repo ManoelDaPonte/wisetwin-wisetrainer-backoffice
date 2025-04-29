@@ -1,7 +1,7 @@
-// components/organizations/OrganizationsList.jsx
+//components/organizations/OrganizationsList.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
 	Loader2,
@@ -10,6 +10,7 @@ import {
 	MoreHorizontal,
 	Users,
 	BookOpen,
+	Package,
 } from "lucide-react";
 import {
 	Card,
@@ -37,6 +38,40 @@ export default function OrganizationsList() {
 	const { organizations, isLoading, error, refreshOrganizations } =
 		useOrganizations();
 	const [deletingId, setDeletingId] = useState(null);
+	const [organizationBuilds, setOrganizationBuilds] = useState({});
+
+	// Récupérer le nombre de builds pour chaque organisation
+	useEffect(() => {
+		const fetchBuildsCount = async () => {
+			const buildsData = {};
+
+			for (const org of organizations) {
+				try {
+					const response = await fetch(
+						`/api/organizations/${org.id}/builds/count`
+					);
+					if (response.ok) {
+						const data = await response.json();
+						buildsData[org.id] = data.count;
+					} else {
+						buildsData[org.id] = 0;
+					}
+				} catch (error) {
+					console.error(
+						`Erreur lors de la récupération des builds pour ${org.id}:`,
+						error
+					);
+					buildsData[org.id] = 0;
+				}
+			}
+
+			setOrganizationBuilds(buildsData);
+		};
+
+		if (organizations.length > 0) {
+			fetchBuildsCount();
+		}
+	}, [organizations]);
 
 	const handleDeleteOrganization = async (id) => {
 		if (
@@ -150,15 +185,6 @@ export default function OrganizationsList() {
 									<DropdownMenuItem
 										onClick={() =>
 											router.push(
-												`/organizations/${org.id}/members`
-											)
-										}
-									>
-										Gérer les membres
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() =>
-											router.push(
 												`/organizations/${org.id}/builds`
 											)
 										}
@@ -197,11 +223,15 @@ export default function OrganizationsList() {
 								<span>{org.membersCount || 0} membres</span>
 							</div>
 							<div className="flex items-center">
-								<BookOpen className="mr-2 h-4 w-4 text-muted-foreground" />
+								<Package className="mr-2 h-4 w-4 text-muted-foreground" />
 								<span>
-									{org.trainingsCount || 0} formations
+									{organizationBuilds[org.id] || 0} builds
 								</span>
 							</div>
+						</div>
+						<div className="flex items-center">
+							<BookOpen className="mr-2 h-4 w-4 text-muted-foreground" />
+							<span>{org.trainingsCount || 0} formations</span>
 						</div>
 					</CardContent>
 					<CardFooter className="border-t bg-muted/30 py-2 text-sm text-muted-foreground">

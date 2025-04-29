@@ -1,4 +1,4 @@
-// app/api/formations/route.jsx
+//app/api/formations/route.jsx
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 

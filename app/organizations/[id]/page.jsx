@@ -1,4 +1,4 @@
-// app/organizations/[id]/page.jsx
+//app/organizations/[id]/page.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,6 +10,7 @@ import {
 	Edit,
 	Users,
 	BookOpen,
+	Package,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -24,14 +25,39 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrganizations } from "@/hooks/useOrganizations";
-import OrganizationMembersList from "@/components/organizations/OrganizationMembersList";
 import OrganizationTrainingsList from "@/components/organizations/OrganizationTrainingsList";
+import OrganizationBuildsList from "@/components/organizations/OrganizationBuildsList";
+import OrganizationUnassignedBuilds from "@/components/organizations/OrganizationUnassignedBuilds";
 
 export default function OrganizationDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
 	const { organization, isLoading, error } = useOrganizations(params.id);
 	const [activeTab, setActiveTab] = useState("details");
+	const [buildCount, setBuildCount] = useState(0);
+
+	useEffect(() => {
+		if (organization) {
+			fetchBuildCount();
+		}
+	}, [organization]);
+
+	const fetchBuildCount = async () => {
+		try {
+			const response = await fetch(
+				`/api/organizations/${params.id}/builds/count`
+			);
+			if (response.ok) {
+				const data = await response.json();
+				setBuildCount(data.count);
+			}
+		} catch (error) {
+			console.error(
+				"Erreur lors de la récupération du nombre de builds:",
+				error
+			);
+		}
+	};
 
 	const handleBack = () => {
 		router.push("/organizations");
@@ -41,12 +67,8 @@ export default function OrganizationDetailsPage() {
 		router.push(`/organizations/edit/${params.id}`);
 	};
 
-	const handleManageMembers = () => {
-		router.push(`/organizations/${params.id}/members`);
-	};
-
-	const handleManageTrainings = () => {
-		router.push(`/organizations/${params.id}/trainings`);
+	const handleGoToBuilds = () => {
+		router.push(`/organizations/${params.id}/builds`);
 	};
 
 	return (
@@ -116,7 +138,7 @@ export default function OrganizationDetailsPage() {
 										Membres
 									</CardTitle>
 									<CardDescription>
-										Gestion des membres de l'organisation
+										Utilisateurs de l'organisation
 									</CardDescription>
 								</CardHeader>
 								<CardContent>
@@ -128,11 +150,32 @@ export default function OrganizationDetailsPage() {
 												membres
 											</span>
 										</div>
+									</div>
+								</CardContent>
+							</Card>
+
+							<Card className="w-full md:w-auto md:flex-1">
+								<CardHeader className="pb-2">
+									<CardTitle className="text-lg">
+										Builds
+									</CardTitle>
+									<CardDescription>
+										Builds Unity de l'organisation
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											<Package className="h-5 w-5 text-primary" />
+											<span className="text-lg font-medium">
+												{buildCount || 0} builds
+											</span>
+										</div>
 										<Button
 											size="sm"
-											onClick={handleManageMembers}
+											onClick={handleGoToBuilds}
 										>
-											Gérer les membres
+											Gérer les builds
 										</Button>
 									</div>
 								</CardContent>
@@ -157,12 +200,6 @@ export default function OrganizationDetailsPage() {
 												formations
 											</span>
 										</div>
-										<Button
-											size="sm"
-											onClick={handleManageTrainings}
-										>
-											Gérer les formations
-										</Button>
 									</div>
 								</CardContent>
 							</Card>
@@ -173,9 +210,7 @@ export default function OrganizationDetailsPage() {
 								<TabsTrigger value="details">
 									Détails
 								</TabsTrigger>
-								<TabsTrigger value="members">
-									Membres
-								</TabsTrigger>
+								<TabsTrigger value="builds">Builds</TabsTrigger>
 								<TabsTrigger value="trainings">
 									Formations
 								</TabsTrigger>
@@ -234,10 +269,15 @@ export default function OrganizationDetailsPage() {
 								</Card>
 							</TabsContent>
 
-							<TabsContent value="members" className="mt-6">
-								<OrganizationMembersList
+							<TabsContent
+								value="builds"
+								className="mt-6 space-y-6"
+							>
+								<OrganizationUnassignedBuilds
 									organizationId={organization.id}
-									members={organization.members}
+								/>
+								<OrganizationBuildsList
+									organizationId={organization.id}
 								/>
 							</TabsContent>
 
