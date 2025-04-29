@@ -7,13 +7,13 @@ import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useOrganization } from "@/hooks/useOrganizations";
+import { useOrganizations } from "@/hooks/useOrganizations";
 import OrganizationBuilds from "@/components/organizations/OrganizationBuilds";
 
 export default function OrganizationBuildsPage() {
 	const params = useParams();
 	const router = useRouter();
-	const { organization, isLoading, error } = useOrganization(params.id);
+	const { organization, isLoading, error } = useOrganizations(params.id);
 
 	const handleBack = () => {
 		router.push(`/organizations/${params.id}`);

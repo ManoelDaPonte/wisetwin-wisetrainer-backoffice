@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, AlertTriangle, Save } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, Save, Edit } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -93,6 +93,14 @@ export default function EditFormationPage() {
 					<Button variant="ghost" onClick={handleBack}>
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Retour aux formations
+					</Button>
+					<Button
+						onClick={() =>
+							router.push(`/formations/modules/${params.id}`)
+						}
+					>
+						<Edit className="mr-2 h-4 w-4" />
+						Gérer les modules
 					</Button>
 				</div>
 

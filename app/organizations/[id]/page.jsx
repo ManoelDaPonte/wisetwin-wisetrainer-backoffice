@@ -23,14 +23,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useOrganization } from "@/hooks/useOrganizations";
+import { useOrganizations } from "@/hooks/useOrganizations";
 import OrganizationMembersList from "@/components/organizations/OrganizationMembersList";
 import OrganizationTrainingsList from "@/components/organizations/OrganizationTrainingsList";
 
 export default function OrganizationDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
-	const { organization, isLoading, error } = useOrganization(params.id);
+	const { organization, isLoading, error } = useOrganizations(params.id);
 	const [activeTab, setActiveTab] = useState("details");
 
 	const handleBack = () => {

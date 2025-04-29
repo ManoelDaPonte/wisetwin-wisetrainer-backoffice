@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Loader2, AlertTriangle } from "lucide-react";
+import { Save, Loader2, AlertTriangle, Edit, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useRouter } from "next/navigation";
 
 // Options pour les catégories de formation
 const categoryOptions = [
@@ -53,6 +54,7 @@ export default function FormationForm({
 			? JSON.stringify(initialData.objectMapping, null, 2)
 			: "{}"
 	);
+	const router = useRouter();
 
 	useEffect(() => {
 		if (initialData) {
@@ -478,15 +480,24 @@ export default function FormationForm({
 					{!isNew &&
 						formData.contents &&
 						formData.contents.length > 0 && (
-							<Alert className="bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-								<AlertTriangle className="h-4 w-4" />
-								<AlertDescription>
+							<div className="space-y-2">
+								<p className="text-muted-foreground">
 									Cette formation contient{" "}
 									{formData.contents.length} module(s).
-									L'éditeur de modules sera implémenté
-									prochainement.
-								</AlertDescription>
-							</Alert>
+								</p>
+								<Button
+									onClick={() =>
+										router.push(
+											`/formations/modules/${params.id}`
+										)
+									}
+									variant="outline"
+									className="mt-4"
+								>
+									<Pencil className="mr-2 h-4 w-4" />
+									Gérer les modules
+								</Button>
+							</div>
 						)}
 				</TabsContent>
 			</Tabs>

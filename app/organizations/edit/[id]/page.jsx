@@ -8,12 +8,12 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import OrganizationForm from "@/components/organizations/OrganizationForm";
-import { useOrganization } from "@/hooks/useOrganizations";
+import { useOrganizations } from "@/hooks/useOrganizations";
 
 export default function EditOrganizationPage() {
 	const params = useParams();
 	const router = useRouter();
-	const { organization, isLoading, error } = useOrganization(params.id);
+	const { organization, isLoading, error } = useOrganizations(params.id);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState(null);
 
