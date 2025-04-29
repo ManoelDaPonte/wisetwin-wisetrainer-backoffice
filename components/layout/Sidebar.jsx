@@ -29,7 +29,7 @@ const navItems = [
 	},
 	{
 		title: "Organisations",
-		href: "/organisations",
+		href: "/organizations",
 		icon: <Users size={20} />,
 	},
 	{

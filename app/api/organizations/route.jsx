@@ -1,30 +1,33 @@
 // app/api/organizations/route.js
 import { NextResponse } from "next/server";
-import { getAllOrganizations, getOrganizationById } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request) {
 	try {
-		// Récupérer le paramètre id de l'URL
-		const { searchParams } = new URL(request.url);
-		const id = searchParams.get("id");
+		// Récupérer toutes les organisations
+		const organizations = await prisma.organization.findMany({
+			include: {
+				_count: {
+					select: {
+						members: true,
+						trainings: true,
+					},
+				},
+			},
+			orderBy: {
+				updatedAt: "desc",
+			},
+		});
 
-		if (id) {
-			// Récupérer une organisation spécifique
-			const organization = await getOrganizationById(id);
+		// Transformer les données pour inclure les compteurs
+		const formattedOrganizations = organizations.map((org) => ({
+			...org,
+			membersCount: org._count.members,
+			trainingsCount: org._count.trainings,
+			_count: undefined,
+		}));
 
-			if (!organization) {
-				return NextResponse.json(
-					{ error: "Organisation non trouvée" },
-					{ status: 404 }
-				);
-			}
-
-			return NextResponse.json({ organization });
-		} else {
-			// Récupérer toutes les organisations
-			const organizations = await getAllOrganizations();
-			return NextResponse.json({ organizations });
-		}
+		return NextResponse.json({ organizations: formattedOrganizations });
 	} catch (error) {
 		console.error(
 			"Erreur lors de la récupération des organisations:",
@@ -34,6 +37,49 @@ export async function GET(request) {
 			{
 				error:
 					"Erreur lors de la récupération des organisations: " +
+					error.message,
+			},
+			{ status: 500 }
+		);
+	}
+}
+
+export async function POST(request) {
+	try {
+		const data = await request.json();
+
+		// Validation de base
+		if (!data.name) {
+			return NextResponse.json(
+				{ error: "Le nom de l'organisation est requis" },
+				{ status: 400 }
+			);
+		}
+
+		// Créer l'organisation
+		const organization = await prisma.organization.create({
+			data: {
+				name: data.name,
+				description: data.description || "",
+				logoUrl: data.logoUrl || null,
+				azureContainer: data.azureContainer || null,
+				isActive: data.isActive !== undefined ? data.isActive : true,
+			},
+		});
+
+		return NextResponse.json(
+			{
+				success: true,
+				organization,
+			},
+			{ status: 201 }
+		);
+	} catch (error) {
+		console.error("Erreur lors de la création de l'organisation:", error);
+		return NextResponse.json(
+			{
+				error:
+					"Erreur lors de la création de l'organisation: " +
 					error.message,
 			},
 			{ status: 500 }
