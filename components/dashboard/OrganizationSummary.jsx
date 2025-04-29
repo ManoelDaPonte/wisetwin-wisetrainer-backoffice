@@ -1,14 +1,11 @@
 // components/dashboard/OrganizationSummary.jsx
-"use client";
-
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
 	Building,
 	Users,
 	BookOpen,
-	Loader2,
 	AlertTriangle,
+	CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,68 +19,53 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
-export default function OrganizationSummary() {
+export default function OrganizationSummary({ data }) {
 	const router = useRouter();
-	const [organizations, setOrganizations] = useState([]);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState(null);
 
-	useEffect(() => {
-		fetchOrganizations();
-	}, []);
+	// Organisation par défaut si aucune donnée n'est fournie
+	const defaultOrganizations = [
+		{
+			id: "1",
+			name: "Entreprise ABC",
+			description: "Grande entreprise industrielle",
+			isActive: true,
+			membersCount: 32,
+			trainingsCount: 8,
+			createdAt: "2023-03-12T00:00:00Z",
+		},
+		{
+			id: "2",
+			name: "StartUp XYZ",
+			description: "Startup technologique en croissance",
+			isActive: true,
+			membersCount: 15,
+			trainingsCount: 5,
+			createdAt: "2023-02-05T00:00:00Z",
+		},
+		{
+			id: "3",
+			name: "Association DEF",
+			description: "Association professionnelle sectorielle",
+			isActive: false,
+			membersCount: 54,
+			trainingsCount: 12,
+			createdAt: "2023-01-23T00:00:00Z",
+		},
+	];
 
-	const fetchOrganizations = async () => {
-		setIsLoading(true);
-		setError(null);
+	// Utiliser les données fournies ou les données par défaut
+	const organizations = data?.length > 0 ? data : defaultOrganizations;
 
-		try {
-			const response = await fetch("/api/organizations?limit=3");
-
-			if (!response.ok) {
-				throw new Error(
-					"Erreur lors de la récupération des organisations"
-				);
-			}
-
-			const data = await response.json();
-			setOrganizations(data.organizations || []);
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-		} finally {
-			setIsLoading(false);
-		}
+	// Fonction pour formater les dates
+	const formatDate = (dateString) => {
+		if (!dateString) return "";
+		const date = new Date(dateString);
+		return date.toLocaleDateString("fr-FR", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		});
 	};
-
-	if (isLoading) {
-		return (
-			<Card>
-				<CardHeader>
-					<CardTitle>Organisations</CardTitle>
-					<CardDescription>Récentes organisations</CardDescription>
-				</CardHeader>
-				<CardContent className="flex justify-center py-6">
-					<Loader2 className="h-8 w-8 animate-spin text-primary" />
-				</CardContent>
-			</Card>
-		);
-	}
-
-	if (error) {
-		return (
-			<Card>
-				<CardHeader>
-					<CardTitle>Organisations</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<Alert variant="destructive">
-						<AlertTriangle className="h-4 w-4" />
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				</CardContent>
-			</Card>
-		);
-	}
 
 	return (
 		<Card>
@@ -104,33 +86,48 @@ export default function OrganizationSummary() {
 						organizations.map((org) => (
 							<div
 								key={org.id}
-								className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0"
+								className="flex flex-col border-b pb-3 last:border-0 last:pb-0"
 							>
-								<div>
+								<div className="flex justify-between items-center">
 									<h3 className="font-medium">{org.name}</h3>
-									<div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-										<div className="flex items-center gap-1">
-											<Users className="h-3 w-3" />
-											<span>{org.membersCount || 0}</span>
-										</div>
-										<div className="flex items-center gap-1">
-											<BookOpen className="h-3 w-3" />
-											<span>
-												{org.trainingsCount || 0}
-											</span>
-										</div>
+									<Badge
+										variant="outline"
+										className={
+											org.isActive
+												? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+												: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+										}
+									>
+										{org.isActive ? (
+											<CheckCircle className="mr-1 h-3 w-3" />
+										) : (
+											<AlertTriangle className="mr-1 h-3 w-3" />
+										)}
+										{org.isActive ? "Active" : "Inactive"}
+									</Badge>
+								</div>
+
+								<p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+									{org.description || "Aucune description"}
+								</p>
+
+								<div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+									<div className="flex items-center gap-1">
+										<Users className="h-3 w-3" />
+										<span>
+											{org.membersCount || 0} membres
+										</span>
+									</div>
+									<div className="flex items-center gap-1">
+										<BookOpen className="h-3 w-3" />
+										<span>
+											{org.trainingsCount || 0} formations
+										</span>
+									</div>
+									<div className="ml-auto">
+										{formatDate(org.createdAt)}
 									</div>
 								</div>
-								<Badge
-									variant="outline"
-									className={
-										org.isActive
-											? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-											: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-									}
-								>
-									{org.isActive ? "Active" : "Inactive"}
-								</Badge>
 							</div>
 						))
 					)}
@@ -140,7 +137,7 @@ export default function OrganizationSummary() {
 				<Button
 					variant="outline"
 					className="w-full"
-					onClick={() => router.push("/organizations")}
+					onClick={() => (window.location.href = "/organizations")}
 				>
 					Voir toutes les organisations
 				</Button>

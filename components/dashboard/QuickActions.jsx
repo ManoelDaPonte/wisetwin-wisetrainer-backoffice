@@ -1,4 +1,6 @@
-import { FileUp, BookOpen, Users, Globe } from "lucide-react";
+// components/dashboard/QuickActions.jsx
+import { useRouter } from "next/navigation";
+import { FileUp, BookOpen, Users, Link2, Building, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -9,6 +11,12 @@ import {
 } from "@/components/ui/card";
 
 export default function QuickActions() {
+	const router = useRouter();
+
+	const handleAction = (path) => {
+		router.push(path);
+	};
+
 	return (
 		<Card>
 			<CardHeader>
@@ -21,6 +29,7 @@ export default function QuickActions() {
 				<Button
 					className="flex w-full justify-start gap-2"
 					variant="outline"
+					onClick={() => handleAction("/builds")}
 				>
 					<FileUp className="h-4 w-4" />
 					<span>Uploader un build</span>
@@ -28,6 +37,7 @@ export default function QuickActions() {
 				<Button
 					className="flex w-full justify-start gap-2"
 					variant="outline"
+					onClick={() => handleAction("/formations/create")}
 				>
 					<BookOpen className="h-4 w-4" />
 					<span>Créer une formation</span>
@@ -35,16 +45,26 @@ export default function QuickActions() {
 				<Button
 					className="flex w-full justify-start gap-2"
 					variant="outline"
+					onClick={() => handleAction("/organizations")}
 				>
-					<Users className="h-4 w-4" />
-					<span>Ajouter une organisation</span>
+					<Building className="h-4 w-4" />
+					<span>Gérer les organisations</span>
 				</Button>
 				<Button
 					className="flex w-full justify-start gap-2"
 					variant="outline"
+					onClick={() => handleAction("/associations")}
 				>
-					<Globe className="h-4 w-4" />
-					<span>Publier une formation</span>
+					<Link2 className="h-4 w-4" />
+					<span>Gérer les associations</span>
+				</Button>
+				<Button
+					className="flex w-full justify-start gap-2 sm:col-span-2"
+					variant="outline"
+					onClick={() => handleAction("/organizations")}
+				>
+					<Plus className="h-4 w-4" />
+					<span>Ajouter une organisation</span>
 				</Button>
 			</CardContent>
 		</Card>
