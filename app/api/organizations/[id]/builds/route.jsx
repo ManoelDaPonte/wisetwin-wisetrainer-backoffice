@@ -2,9 +2,10 @@
 import { NextResponse } from "next/server";
 import { getOrganizationBuilds } from "@/lib/services/builds/buildsService";
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
 	try {
-		const organizationId = params.id;
+		// Dans Next.js 15, params est maintenant une Promise
+		const { id: organizationId } = await context.params;
 
 		if (!organizationId) {
 			return NextResponse.json(
@@ -13,16 +14,23 @@ export async function GET(request, { params }) {
 			);
 		}
 
+		console.log("Fetching builds for organization:", organizationId); // Debug
+
 		const builds = await getOrganizationBuilds(organizationId);
+		console.log("Builds found:", builds.length); // Debug
 
 		return NextResponse.json({ builds });
 	} catch (error) {
-		console.error("Erreur lors de la récupération des builds:", error);
+		console.error("Erreur détaillée:", error);
 		return NextResponse.json(
 			{
 				error:
-					"Erreur lors de la récupération des builds: " +
-					error.message,
+					error.message ||
+					"Erreur lors de la récupération des builds",
+				details:
+					process.env.NODE_ENV === "development"
+						? error.stack
+						: undefined,
 			},
 			{ status: 500 }
 		);

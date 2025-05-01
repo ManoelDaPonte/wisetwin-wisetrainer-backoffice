@@ -1,8 +1,16 @@
-//components/organizations/BuildUploadDialog.jsx
+//components/organizations/currentOrganization/builds/BuildUploadDialog.jsx
 "use client";
 
 import { useState, useRef } from "react";
-import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import {
+	Upload,
+	X,
+	CheckCircle,
+	AlertCircle,
+	Loader2,
+	FileUp,
+	AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,14 +36,51 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 	});
 	const fileInputRef = useRef(null);
 
+	// Vérification des fichiers requis pour Unity
+	const requiredFiles = [
+		{ ext: ".data.gz", label: "Données (.data.gz)" },
+		{ ext: ".framework.js.gz", label: "Framework (.framework.js.gz)" },
+		{ ext: ".loader.js", label: "Loader (.loader.js)" },
+		{ ext: ".wasm.gz", label: "WebAssembly (.wasm.gz)" },
+	];
+
+	const checkRequiredFiles = (fileList) => {
+		const uploadedFileNames = fileList.map((f) => f.name.toLowerCase());
+		return requiredFiles.every((req) =>
+			uploadedFileNames.some((name) => name.endsWith(req.ext))
+		);
+	};
+
+	const getMissingFiles = (fileList) => {
+		const uploadedFileNames = fileList.map((f) => f.name.toLowerCase());
+		return requiredFiles
+			.filter(
+				(req) =>
+					!uploadedFileNames.some((name) => name.endsWith(req.ext))
+			)
+			.map((req) => req.label);
+	};
+
+	const extractBuildName = (fileList) => {
+		// Trouver le fichier loader.js pour extraire le nom de base
+		const loaderFile = fileList.find((f) =>
+			f.name.toLowerCase().endsWith(".loader.js")
+		);
+		if (loaderFile) {
+			return loaderFile.name.replace(/\.loader\.js$/i, "");
+		}
+		return "";
+	};
+
 	const handleFileChange = (e) => {
 		const selectedFiles = Array.from(e.target.files);
 		if (selectedFiles.length > 0) {
 			setFiles(selectedFiles);
 			if (!formData.name) {
-				// Mise à jour automatique du nom
-				const fileName = selectedFiles[0].name.replace(/\.[^/.]+$/, "");
-				setFormData({ ...formData, name: fileName });
+				const buildName = extractBuildName(selectedFiles);
+				if (buildName) {
+					setFormData({ ...formData, name: buildName });
+				}
 			}
 		}
 	};
@@ -53,8 +98,10 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 		if (droppedFiles.length > 0) {
 			setFiles(droppedFiles);
 			if (!formData.name) {
-				const fileName = droppedFiles[0].name.replace(/\.[^/.]+$/, "");
-				setFormData({ ...formData, name: fileName });
+				const buildName = extractBuildName(droppedFiles);
+				if (buildName) {
+					setFormData({ ...formData, name: buildName });
+				}
 			}
 		}
 	};
@@ -72,6 +119,16 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 			return;
 		}
 
+		if (!checkRequiredFiles(files)) {
+			const missing = getMissingFiles(files);
+			setError(
+				`Fichiers manquants pour un build Unity complet : ${missing.join(
+					", "
+				)}`
+			);
+			return;
+		}
+
 		if (!formData.name || !formData.version) {
 			setError("Le nom et la version sont requis");
 			return;
@@ -81,7 +138,6 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 		setUploading(true);
 
 		try {
-			// Simulation de progression
 			const uploadInterval = setInterval(() => {
 				setUploadProgress((prev) => {
 					if (prev >= 90) clearInterval(uploadInterval);
@@ -95,7 +151,6 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 			setUploadProgress(100);
 			setSuccess(true);
 
-			// Fermer après un délai
 			setTimeout(() => {
 				onClose();
 				resetForm();
@@ -124,9 +179,11 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 		}
 	};
 
+	const areFilesValid = files.length > 0 && checkRequiredFiles(files);
+
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="max-w-md">
+			<DialogContent className="max-w-lg">
 				<DialogHeader>
 					<DialogTitle>Uploader un build Unity</DialogTitle>
 				</DialogHeader>
@@ -148,32 +205,72 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 						</Alert>
 					)}
 
+					{/* Zone de dépôt des fichiers */}
 					<div
 						className={`border-2 border-dashed rounded-md p-6 text-center ${
-							files.length > 0
-								? "border-primary bg-primary/5"
+							areFilesValid
+								? "border-green-500 bg-green-50 dark:bg-green-900/20"
+								: files.length > 0
+								? "border-red-500 bg-red-50 dark:bg-red-900/20"
 								: "border-gray-300"
 						}`}
 						onDragOver={handleDragOver}
 						onDrop={handleDrop}
 					>
 						{files.length > 0 ? (
-							<div className="space-y-2">
+							<div className="space-y-3">
 								<div className="flex items-center justify-center gap-2">
-									<CheckCircle className="h-5 w-5 text-green-600" />
+									{areFilesValid ? (
+										<CheckCircle className="h-5 w-5 text-green-600" />
+									) : (
+										<AlertTriangle className="h-5 w-5 text-red-600" />
+									)}
 									<span className="font-medium">
 										{files.length} fichier(s) sélectionné(s)
 									</span>
 								</div>
-								<div className="text-sm text-muted-foreground">
-									{files.map((file) => file.name).join(", ")}
+
+								{/* Liste des fichiers requis */}
+								<div className="text-sm space-y-1">
+									{requiredFiles.map((req) => {
+										const hasFile = files.some((f) =>
+											f.name
+												.toLowerCase()
+												.endsWith(req.ext)
+										);
+										return (
+											<div
+												key={req.ext}
+												className={`flex items-center gap-2 ${
+													hasFile
+														? "text-green-600"
+														: "text-red-600"
+												}`}
+											>
+												{hasFile ? (
+													<CheckCircle className="h-4 w-4" />
+												) : (
+													<X className="h-4 w-4" />
+												)}
+												<span>{req.label}</span>
+											</div>
+										);
+									})}
 								</div>
+
+								{!areFilesValid && (
+									<p className="text-sm text-red-600 mt-2">
+										Veuillez ajouter tous les fichiers
+										requis
+									</p>
+								)}
 							</div>
 						) : (
-							<div className="space-y-2">
+							<div className="space-y-3">
 								<Upload className="h-8 w-8 mx-auto text-muted-foreground" />
 								<p className="text-sm text-muted-foreground">
-									Glissez-déposez vos fichiers Unity ici ou
+									Glissez-déposez les fichiers de votre build
+									Unity ici ou
 								</p>
 								<Button
 									type="button"
@@ -182,8 +279,20 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 										fileInputRef.current?.click()
 									}
 								>
+									<FileUp className="mr-2 h-4 w-4" />
 									Parcourir
 								</Button>
+
+								<div className="mt-4">
+									<p className="text-xs text-muted-foreground font-medium">
+										Fichiers requis :
+									</p>
+									<ul className="text-xs text-muted-foreground mt-1 space-y-1">
+										{requiredFiles.map((req) => (
+											<li key={req.ext}>• {req.label}</li>
+										))}
+									</ul>
+								</div>
 							</div>
 						)}
 						<input
@@ -192,10 +301,11 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 							multiple
 							onChange={handleFileChange}
 							className="hidden"
-							accept=".zip,.unitypackage"
+							accept=".gz,.js"
 						/>
 					</div>
 
+					{/* Formulaire des métadonnées */}
 					<div className="space-y-3">
 						<div>
 							<Label htmlFor="name">Nom du build</Label>
@@ -206,6 +316,7 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 								onChange={handleInputChange}
 								required
 								disabled={uploading}
+								placeholder="ex: WiseTrainer_01"
 							/>
 						</div>
 
@@ -254,7 +365,10 @@ export default function BuildUploadDialog({ isOpen, onClose, onUpload }) {
 						>
 							Annuler
 						</Button>
-						<Button type="submit" disabled={uploading || success}>
+						<Button
+							type="submit"
+							disabled={uploading || success || !areFilesValid}
+						>
 							{uploading ? (
 								<>
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,4 +1,4 @@
-//lib/hooks/builds/useOrganizationBuilds.js
+//lib/hooks/builds/useOrganizationBuilds.jsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -11,25 +11,43 @@ export function useOrganizationBuilds(organizationId) {
 	const [isUploading, setIsUploading] = useState(false);
 
 	const fetchBuilds = useCallback(async () => {
-		if (!organizationId) return;
+		if (!organizationId) {
+			setBuilds([]);
+			setIsLoading(false);
+			return;
+		}
 
 		setIsLoading(true);
 		setError(null);
 
 		try {
+			console.log("Fetching builds for organization:", organizationId);
 			const response = await fetch(
 				`/api/organizations/${organizationId}/builds`
 			);
 
 			if (!response.ok) {
-				throw new Error("Erreur lors de la récupération des builds");
+				// Essayer d'extraire l'erreur plus détaillée du serveur
+				let errorMessage = "Erreur lors de la récupération des builds";
+				try {
+					const errorData = await response.json();
+					errorMessage = errorData.error || errorMessage;
+				} catch (e) {
+					console.error("Erreur lors du parsing de la réponse:", e);
+				}
+
+				throw new Error(errorMessage);
 			}
 
 			const data = await response.json();
+			console.log("Builds received:", data); // Debug
+
 			setBuilds(data.builds || []);
 		} catch (err) {
-			console.error("Erreur:", err);
+			console.error("Erreur détaillée:", err);
 			setError(err.message);
+			// En cas d'erreur, on met des données par défaut pour ne pas casser l'UI
+			setBuilds([]);
 		} finally {
 			setIsLoading(false);
 		}
@@ -57,6 +75,11 @@ export function useOrganizationBuilds(organizationId) {
 				formData.append(key, value);
 			});
 
+			console.log(
+				"Uploading build to:",
+				`/api/organizations/${organizationId}/builds/upload`
+			);
+
 			const response = await fetch(
 				`/api/organizations/${organizationId}/builds/upload`,
 				{
@@ -77,7 +100,7 @@ export function useOrganizationBuilds(organizationId) {
 
 			return data.build;
 		} catch (err) {
-			console.error("Erreur:", err);
+			console.error("Erreur d'upload:", err);
 			setError(err.message);
 			throw err;
 		} finally {

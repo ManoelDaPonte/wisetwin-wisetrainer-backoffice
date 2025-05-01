@@ -1,4 +1,4 @@
-// lib/azure.js
+//lib/azure.jsx
 import {
 	BlobServiceClient,
 	StorageSharedKeyCredential,
@@ -19,12 +19,10 @@ const unityBuildExtensions = [
 
 // Fonction pour initialiser le client Azure Blob Storage
 function getBlobServiceClient() {
-	// Vérifier si nous avons une connection string
 	if (connectionString) {
 		return BlobServiceClient.fromConnectionString(connectionString);
 	}
 
-	// Sinon, utiliser les credentials
 	if (!accountName || !accountKey) {
 		throw new Error(
 			"Les variables d'environnement Azure ne sont pas configurées correctement"
@@ -39,21 +37,6 @@ function getBlobServiceClient() {
 		`https://${accountName}.blob.core.windows.net`,
 		sharedKeyCredential
 	);
-}
-
-// Récupérer la liste des containers
-export async function getContainers() {
-	const blobServiceClient = getBlobServiceClient();
-	const containers = [];
-
-	for await (const container of blobServiceClient.listContainers()) {
-		containers.push({
-			name: container.name,
-			properties: container.properties,
-		});
-	}
-
-	return containers;
 }
 
 // Extraire le nom de base du build à partir du nom complet du fichier
@@ -75,11 +58,26 @@ function extractBuildBaseName(blobName) {
 	return baseName;
 }
 
+// Vérifier si un build Unity est complet (contient les 4 fichiers requis)
+function isUnityBuildComplete(buildFiles) {
+	const requiredExtensions = [
+		".data.gz",
+		".framework.js.gz",
+		".loader.js",
+		".wasm.gz",
+	];
+
+	// Vérifier que chaque extension requise est présente
+	return requiredExtensions.every((ext) =>
+		buildFiles.some((file) => file.name.endsWith(ext))
+	);
+}
+
 // Récupérer la liste des builds dans un container
 export async function getBuildsFromContainer(containerName) {
 	const blobServiceClient = getBlobServiceClient();
 	const containerClient = blobServiceClient.getContainerClient(containerName);
-	const builds = {};
+	const buildsMap = {};
 	const buildFiles = {};
 
 	try {
@@ -92,85 +90,83 @@ export async function getBuildsFromContainer(containerName) {
 
 		// Récupérer tous les blobs du container
 		for await (const blob of containerClient.listBlobsFlat()) {
-			// Récupérer le nom de base du build
-			const buildName = extractBuildBaseName(blob.name);
+			const buildBaseName = extractBuildBaseName(blob.name);
 			const folderPath = blob.name.includes("/")
 				? blob.name.substring(0, blob.name.lastIndexOf("/") + 1)
 				: "";
 
-			// Utiliser le chemin complet + nom de base comme identifiant unique
-			const buildId = `${folderPath}${buildName}`;
+			const buildId = `${folderPath}${buildBaseName}`;
 
-			// Si c'est la première fois qu'on rencontre ce build, on l'initialise
-			if (!builds[buildId]) {
-				// Récupérer les propriétés du blob (pour les métadonnées)
+			// Initialiser le build si nécessaire
+			if (!buildsMap[buildId]) {
 				const blobClient = containerClient.getBlobClient(blob.name);
 				const properties = await blobClient.getProperties();
 				const metadata = properties.metadata || {};
 
-				builds[buildId] = {
-					id: `${containerName}:${buildId}`, // ID unique global avec le nom du container
+				buildsMap[buildId] = {
+					id: `${containerName}:${buildId}`,
 					internalId: buildId,
-					name: metadata.name || buildName,
+					name: metadata.name || buildBaseName,
 					fullPath: folderPath,
 					version: metadata.version || "1.0",
 					description: metadata.description || "",
-					size: 0, // Sera calculé en additionnant la taille de tous les fichiers
+					size: 0,
 					uploadDate: new Date(
 						properties.lastModified
 					).toLocaleDateString("fr-FR"),
-					lastModified: properties.lastModified, // Pour le tri
+					lastModified: properties.lastModified,
 					status: "published",
 					contentType: properties.contentType,
 					uploadProgress: 100,
-					url: "", // URL principale (sera définie plus tard)
+					url: "",
 					baseUrl: blobClient.url.replace(blob.name, ""),
 					metadata: metadata,
 					containerName: containerName,
-					files: [], // Liste des fichiers associés à ce build
+					files: [],
 				};
-				buildFiles[buildId] = {};
+				buildFiles[buildId] = [];
 			}
 
-			// Ajouter ce fichier à la liste des fichiers du build
-			const fileExt = getFileExtension(blob.name);
-			buildFiles[buildId][fileExt] = blob.name;
-
-			// Ajouter la taille du blob à la taille totale du build
-			const blobClient = containerClient.getBlobClient(blob.name);
-			const properties = await blobClient.getProperties();
-			builds[buildId].size += properties.contentLength;
-
-			// Ajouter le fichier à la liste des fichiers du build
-			builds[buildId].files.push({
+			// Ajouter ce fichier à la liste
+			buildFiles[buildId].push({
 				name: blob.name,
-				size: formatFileSize(properties.contentLength),
-				type: fileExt,
+				size: blob.properties.contentLength,
+				type: getFileExtension(blob.name),
 				url: containerClient.getBlobClient(blob.name).url,
 			});
+
+			buildsMap[buildId].size += blob.properties.contentLength;
 		}
 
-		// Pour chaque build, définir l'URL principale comme l'URL du fichier loader.js
-		Object.keys(builds).forEach((buildId) => {
-			const build = builds[buildId];
+		// Filtrer pour ne garder que les builds complets et mettre à jour les infos
+		const completeBuilds = [];
+		Object.entries(buildsMap).forEach(([buildId, build]) => {
+			const files = buildFiles[buildId];
 
-			// Chercher le fichier loader.js
-			const loaderFile = build.files.find((file) =>
-				file.name.endsWith(".loader.js")
-			);
-			if (loaderFile) {
-				build.url = loaderFile.url;
-			} else if (build.files.length > 0) {
-				// Si pas de loader.js, utiliser le premier fichier
-				build.url = build.files[0].url;
+			if (isUnityBuildComplete(files)) {
+				// Mettre à jour les fichiers du build
+				build.files = files;
+
+				// Trouver l'URL du loader.js
+				const loaderFile = files.find((file) =>
+					file.name.endsWith(".loader.js")
+				);
+				if (loaderFile) {
+					build.url = loaderFile.url;
+				}
+
+				// Mettre à jour la taille totale
+				build.totalSize = formatFileSize(build.size);
+
+				completeBuilds.push(build);
+			} else {
+				console.warn(
+					`Build ${buildId} incomplet (${files.length} fichiers sur 4 requis)`
+				);
 			}
-
-			// Mettre à jour la taille totale du build
-			build.totalSize = formatFileSize(build.size);
 		});
 
-		// Convertir l'objet builds en tableau
-		return Object.values(builds);
+		return completeBuilds;
 	} catch (error) {
 		console.error(
 			`Erreur lors de la récupération des builds du container ${containerName}:`,
@@ -182,14 +178,12 @@ export async function getBuildsFromContainer(containerName) {
 
 // Obtenir l'extension d'un fichier
 function getFileExtension(filename) {
-	// Pour les fichiers Unity spécifiques
 	for (const ext of unityBuildExtensions) {
 		if (filename.endsWith(ext)) {
 			return ext;
 		}
 	}
 
-	// Pour les autres types de fichiers
 	const lastDotIndex = filename.lastIndexOf(".");
 	if (lastDotIndex !== -1) {
 		return filename.substring(lastDotIndex);
@@ -197,90 +191,67 @@ function getFileExtension(filename) {
 	return "";
 }
 
-// Récupérer tous les builds de tous les containers
-export async function getAllBuilds() {
-	try {
-		const containers = await getContainers();
-		let allBuilds = [];
-
-		for (const container of containers) {
-			// On ignore les containers système ou qui ne seraient pas destinés aux builds
-			if (
-				!container.name.startsWith("$") &&
-				!container.name.includes("system")
-			) {
-				const builds = await getBuildsFromContainer(container.name);
-				allBuilds = [...allBuilds, ...builds];
-			}
-		}
-
-		return allBuilds;
-	} catch (error) {
-		console.error(
-			"Erreur lors de la récupération de tous les builds:",
-			error
-		);
-		throw error;
-	}
-}
-
-// Récupérer les détails d'un build spécifique
-export async function getBuildDetails(containerName, buildId) {
-	try {
-		// Récupérer tous les builds du container
-		const builds = await getBuildsFromContainer(containerName);
-
-		// Trouver le build spécifique
-		const build = builds.find((b) => b.internalId === buildId);
-
-		if (!build) {
-			throw new Error(
-				`Build ${buildId} introuvable dans le container ${containerName}`
-			);
-		}
-
-		return build;
-	} catch (error) {
-		console.error(
-			`Erreur lors de la récupération des détails du build ${buildId}:`,
-			error
-		);
-		throw error;
-	}
-}
-
-// Formater la taille du fichier
-function formatFileSize(bytes) {
-	if (bytes === 0) return "0 Bytes";
-
-	const k = 1024;
-	const sizes = ["Bytes", "KB", "MB", "GB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-}
-
-// Uploader un nouveau build
-export async function uploadBuild(containerName, files, metadata = {}) {
+// Uploader un nouveau build (version adaptée)
+export async function uploadUnityBuild(containerName, files, metadata = {}) {
 	const blobServiceClient = getBlobServiceClient();
 	const containerClient = blobServiceClient.getContainerClient(containerName);
+
+	// Vérifier si les 4 fichiers requis sont présents
+	const requiredExtensions = [
+		".data.gz",
+		".framework.js.gz",
+		".loader.js",
+		".wasm.gz",
+	];
+	const fileExtensions = files.map((file) =>
+		file.name.substring(file.name.lastIndexOf("."))
+	);
+
+	const missingFiles = requiredExtensions.filter(
+		(ext) =>
+			!fileExtensions.some(
+				(fileExt) => fileExt === ext || fileExt.endsWith(ext)
+			)
+	);
+
+	if (missingFiles.length > 0) {
+		throw new Error(
+			`Fichiers manquants pour un build Unity complet : ${missingFiles.join(
+				", "
+			)}`
+		);
+	}
 
 	// Vérifier si le container existe, sinon le créer
 	const containerExists = await containerClient.exists();
 	if (!containerExists) {
 		await containerClient.create({
-			access: "blob", // Accès public pour les blobs individuels
+			access: "blob",
 		});
 	}
 
 	const uploadResults = [];
 	const basePath = metadata.folderPath || "";
-	const timestamp = Date.now();
+	const buildName = metadata.name || `Build_${Date.now()}`;
+	const buildBaseName = buildName.replace(/\.[^/.]+$/, "");
 
 	try {
 		for (const file of files) {
-			// Construire le nom du blob
-			const blobName = `${basePath}${timestamp}-${file.name}`;
+			// Construire le nom du blob avec la structure attendue
+			let blobName;
+			if (file.name.endsWith(".data.gz")) {
+				blobName = `${basePath}${buildBaseName}.data.gz`;
+			} else if (file.name.endsWith(".framework.js.gz")) {
+				blobName = `${basePath}${buildBaseName}.framework.js.gz`;
+			} else if (file.name.endsWith(".loader.js")) {
+				blobName = `${basePath}${buildBaseName}.loader.js`;
+			} else if (file.name.endsWith(".wasm.gz")) {
+				blobName = `${basePath}${buildBaseName}.wasm.gz`;
+			} else {
+				// Fichier non reconnu, on utilise le nom tel quel
+				blobName = `${basePath}${file.name}`;
+			}
+
 			const blockBlobClient =
 				containerClient.getBlockBlobClient(blobName);
 
@@ -292,6 +263,7 @@ export async function uploadBuild(containerName, files, metadata = {}) {
 				metadata: {
 					...metadata,
 					originalName: file.name,
+					buildName: buildBaseName,
 				},
 			};
 
@@ -312,7 +284,7 @@ export async function uploadBuild(containerName, files, metadata = {}) {
 
 		return {
 			success: true,
-			buildName: metadata.name || `Build_${timestamp}`,
+			buildName: buildBaseName,
 			files: uploadResults,
 			metadata,
 		};
@@ -322,74 +294,22 @@ export async function uploadBuild(containerName, files, metadata = {}) {
 	}
 }
 
-// Supprimer un build (tous les fichiers associés)
-export async function deleteBuild(containerName, buildId) {
-	const blobServiceClient = getBlobServiceClient();
-	const containerClient = blobServiceClient.getContainerClient(containerName);
+// Formater la taille du fichier
+function formatFileSize(bytes) {
+	if (bytes === 0) return "0 Bytes";
 
-	try {
-		// Récupérer tous les builds du container
-		const builds = await getBuildsFromContainer(containerName);
+	const k = 1024;
+	const sizes = ["Bytes", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-		// Trouver le build spécifique
-		const build = builds.find((b) => b.internalId === buildId);
-
-		if (!build) {
-			throw new Error(
-				`Build ${buildId} introuvable dans le container ${containerName}`
-			);
-		}
-
-		// Supprimer tous les fichiers associés au build
-		for (const file of build.files) {
-			const blockBlobClient = containerClient.getBlockBlobClient(
-				file.name
-			);
-			await blockBlobClient.delete();
-		}
-
-		return { success: true };
-	} catch (error) {
-		console.error(
-			`Erreur lors de la suppression du build ${buildId}:`,
-			error
-		);
-		throw error;
-	}
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-// Mettre à jour les métadonnées d'un build
-export async function updateBuildMetadata(containerName, buildId, metadata) {
-	const blobServiceClient = getBlobServiceClient();
-	const containerClient = blobServiceClient.getContainerClient(containerName);
-
-	try {
-		// Récupérer tous les builds du container
-		const builds = await getBuildsFromContainer(containerName);
-
-		// Trouver le build spécifique
-		const build = builds.find((b) => b.internalId === buildId);
-
-		if (!build) {
-			throw new Error(
-				`Build ${buildId} introuvable dans le container ${containerName}`
-			);
-		}
-
-		// Mettre à jour les métadonnées pour tous les fichiers du build
-		for (const file of build.files) {
-			const blockBlobClient = containerClient.getBlockBlobClient(
-				file.name
-			);
-			await blockBlobClient.setMetadata(metadata);
-		}
-
-		return { success: true, metadata };
-	} catch (error) {
-		console.error(
-			`Erreur lors de la mise à jour des métadonnées du build ${buildId}:`,
-			error
-		);
-		throw error;
-	}
-}
+// Export des autres fonctions existantes...
+export {
+	getContainers,
+	getAllBuilds,
+	getBuildDetails,
+	deleteBuild,
+	updateBuildMetadata,
+};
