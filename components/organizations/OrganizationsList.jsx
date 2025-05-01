@@ -1,16 +1,8 @@
 //components/organizations/OrganizationsList.jsx
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-	Loader2,
-	Building,
-	AlertTriangle,
-	MoreHorizontal,
-	Users,
-	Package,
-} from "lucide-react";
+import { Loader2, Building, AlertTriangle, Users, Package } from "lucide-react";
 import {
 	Card,
 	CardContent,
@@ -19,84 +11,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useOrganizations } from "@/lib/hooks/organizations/useOrganizations";
 
 export default function OrganizationsList() {
 	const router = useRouter();
-	const { organizations, isLoading, error, refreshOrganizations } =
-		useOrganizations();
-	const [deletingId, setDeletingId] = useState(null);
-	const [organizationBuilds, setOrganizationBuilds] = useState({});
-
-	// Récupérer le nombre de builds pour chaque organisation
-	useEffect(() => {
-		const fetchBuildsCount = async () => {
-			const buildsData = {};
-
-			for (const org of organizations) {
-				try {
-					const response = await fetch(
-						`/api/organizations/${org.id}/builds/count`
-					);
-					if (response.ok) {
-						const data = await response.json();
-						buildsData[org.id] = data.count;
-					} else {
-						buildsData[org.id] = 0;
-					}
-				} catch (error) {
-					console.error(
-						`Erreur lors de la récupération des builds pour ${org.id}:`,
-						error
-					);
-					buildsData[org.id] = 0;
-				}
-			}
-
-			setOrganizationBuilds(buildsData);
-		};
-
-		if (organizations.length > 0) {
-			fetchBuildsCount();
-		}
-	}, [organizations]);
-
-	const handleDeleteOrganization = async (id) => {
-		if (
-			!confirm("Êtes-vous sûr de vouloir supprimer cette organisation ?")
-		) {
-			return;
-		}
-
-		setDeletingId(id);
-		try {
-			const response = await fetch(`/api/organizations/${id}`, {
-				method: "DELETE",
-			});
-
-			if (!response.ok) {
-				throw new Error("Erreur lors de la suppression");
-			}
-
-			refreshOrganizations();
-		} catch (err) {
-			console.error("Erreur:", err);
-			alert("Erreur lors de la suppression: " + err.message);
-		} finally {
-			setDeletingId(null);
-		}
-	};
+	const { organizations, isLoading, error } = useOrganizations();
 
 	if (isLoading) {
 		return (
@@ -131,7 +52,8 @@ export default function OrganizationsList() {
 			{organizations.map((org) => (
 				<Card
 					key={org.id}
-					className="hover-lift transition-all overflow-hidden"
+					className="hover-lift transition-all overflow-hidden cursor-pointer hover:border-primary/50"
+					onClick={() => router.push(`/organizations/${org.id}`)}
 				>
 					<CardHeader className="pb-2">
 						<div className="flex items-start justify-between">
@@ -143,58 +65,6 @@ export default function OrganizationsList() {
 									{org.description || "Aucune description"}
 								</CardDescription>
 							</div>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="ghost" size="icon">
-										{deletingId === org.id ? (
-											<Loader2 className="h-4 w-4 animate-spin" />
-										) : (
-											<MoreHorizontal className="h-4 w-4" />
-										)}
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuLabel>
-										Actions
-									</DropdownMenuLabel>
-									<DropdownMenuItem
-										onClick={() =>
-											router.push(
-												`/organizations/${org.id}`
-											)
-										}
-									>
-										Voir les détails
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() =>
-											router.push(
-												`/organizations/edit/${org.id}`
-											)
-										}
-									>
-										Modifier
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() =>
-											router.push(
-												`/organizations/${org.id}/builds`
-											)
-										}
-									>
-										Gérer les builds
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										className="text-destructive"
-										onClick={() =>
-											handleDeleteOrganization(org.id)
-										}
-									>
-										Supprimer
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
 						</div>
 						<div className="mt-1">
 							<Badge
@@ -217,9 +87,7 @@ export default function OrganizationsList() {
 							</div>
 							<div className="flex items-center">
 								<Package className="mr-2 h-4 w-4 text-muted-foreground" />
-								<span>
-									{organizationBuilds[org.id] || 0} builds
-								</span>
+								<span>{org.buildsCount || 0} builds</span>
 							</div>
 						</div>
 					</CardContent>

@@ -1,63 +1,22 @@
 //app/organizations/[id]/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-	ArrowLeft,
-	Loader2,
-	AlertTriangle,
-	Edit,
-	Users,
-	BookOpen,
-	Package,
-} from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, Edit } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useOrganizations } from "@/hooks/useOrganizations";
-import OrganizationTrainingsList from "@/components/organizations/OrganizationTrainingsList";
-import OrganizationBuildsList from "@/components/organizations/OrganizationBuildsList";
-import OrganizationUnassignedBuilds from "@/components/organizations/OrganizationUnassignedBuilds";
+import { useCurrentOrganization } from "@/lib/hooks/organizations/currentOrganization/useCurrentOrganization";
+import CurrentOrganizationDetails from "@/components/organizations/currentOrganization/CurrentOrganizationDetails";
+import CurrentOrganizationMembersTable from "@/components/organizations/currentOrganization/CurrentOrganizationMembersTable";
+import CurrentOrganizationBuildsOverview from "@/components/organizations/currentOrganization/CurrentOrganizationBuildsOverview";
 
 export default function OrganizationDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
-	const { organization, isLoading, error } = useOrganizations(params.id);
-	const [activeTab, setActiveTab] = useState("details");
-	const [buildCount, setBuildCount] = useState(0);
-
-	useEffect(() => {
-		if (organization) {
-			fetchBuildCount();
-		}
-	}, [organization]);
-
-	const fetchBuildCount = async () => {
-		try {
-			const response = await fetch(
-				`/api/organizations/${params.id}/builds/count`
-			);
-			if (response.ok) {
-				const data = await response.json();
-				setBuildCount(data.count);
-			}
-		} catch (error) {
-			console.error(
-				"Erreur lors de la récupération du nombre de builds:",
-				error
-			);
-		}
-	};
+	const { organization, isLoading, error } = useCurrentOrganization(
+		params.id
+	);
 
 	const handleBack = () => {
 		router.push("/organizations");
@@ -65,10 +24,6 @@ export default function OrganizationDetailsPage() {
 
 	const handleEdit = () => {
 		router.push(`/organizations/edit/${params.id}`);
-	};
-
-	const handleGoToBuilds = () => {
-		router.push(`/organizations/${params.id}/builds`);
 	};
 
 	return (
@@ -99,195 +54,15 @@ export default function OrganizationDetailsPage() {
 					</Alert>
 				) : organization ? (
 					<div className="space-y-6">
-						<div>
-							<h1 className="text-2xl font-bold">
-								{organization.name}
-							</h1>
-							<p className="text-muted-foreground mt-1">
-								{organization.description ||
-									"Aucune description"}
-							</p>
-							<div className="flex items-center mt-2 gap-2">
-								<Badge
-									variant="outline"
-									className={
-										organization.isActive
-											? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-											: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-									}
-								>
-									{organization.isActive
-										? "Active"
-										: "Inactive"}
-								</Badge>
-								{organization.azureContainer && (
-									<Badge
-										variant="outline"
-										className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-									>
-										Container: {organization.azureContainer}
-									</Badge>
-								)}
-							</div>
-						</div>
-
-						<div className="flex flex-wrap gap-4">
-							<Card className="w-full md:w-auto md:flex-1">
-								<CardHeader className="pb-2">
-									<CardTitle className="text-lg">
-										Membres
-									</CardTitle>
-									<CardDescription>
-										Utilisateurs de l'organisation
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<Users className="h-5 w-5 text-primary" />
-											<span className="text-lg font-medium">
-												{organization.membersCount || 0}{" "}
-												membres
-											</span>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card className="w-full md:w-auto md:flex-1">
-								<CardHeader className="pb-2">
-									<CardTitle className="text-lg">
-										Builds
-									</CardTitle>
-									<CardDescription>
-										Builds Unity de l'organisation
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<Package className="h-5 w-5 text-primary" />
-											<span className="text-lg font-medium">
-												{buildCount || 0} builds
-											</span>
-										</div>
-										<Button
-											size="sm"
-											onClick={handleGoToBuilds}
-										>
-											Gérer les builds
-										</Button>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card className="w-full md:w-auto md:flex-1">
-								<CardHeader className="pb-2">
-									<CardTitle className="text-lg">
-										Formations
-									</CardTitle>
-									<CardDescription>
-										Formations associées à l'organisation
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<BookOpen className="h-5 w-5 text-primary" />
-											<span className="text-lg font-medium">
-												{organization.trainingsCount ||
-													0}{" "}
-												formations
-											</span>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						</div>
-
-						<Tabs value={activeTab} onValueChange={setActiveTab}>
-							<TabsList>
-								<TabsTrigger value="details">
-									Détails
-								</TabsTrigger>
-								<TabsTrigger value="builds">Builds</TabsTrigger>
-								<TabsTrigger value="trainings">
-									Formations
-								</TabsTrigger>
-							</TabsList>
-
-							<TabsContent value="details" className="mt-6">
-								<Card>
-									<CardHeader>
-										<CardTitle>
-											Informations détaillées
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div>
-												<h3 className="text-sm font-medium text-muted-foreground">
-													ID
-												</h3>
-												<p>{organization.id}</p>
-											</div>
-											<div>
-												<h3 className="text-sm font-medium text-muted-foreground">
-													Créée le
-												</h3>
-												<p>
-													{new Date(
-														organization.createdAt
-													).toLocaleDateString(
-														"fr-FR"
-													)}
-												</p>
-											</div>
-											<div>
-												<h3 className="text-sm font-medium text-muted-foreground">
-													Dernière mise à jour
-												</h3>
-												<p>
-													{new Date(
-														organization.updatedAt
-													).toLocaleDateString(
-														"fr-FR"
-													)}
-												</p>
-											</div>
-											<div>
-												<h3 className="text-sm font-medium text-muted-foreground">
-													Conteneur Azure
-												</h3>
-												<p>
-													{organization.azureContainer ||
-														"Non défini"}
-												</p>
-											</div>
-										</div>
-									</CardContent>
-								</Card>
-							</TabsContent>
-
-							<TabsContent
-								value="builds"
-								className="mt-6 space-y-6"
-							>
-								<OrganizationUnassignedBuilds
-									organizationId={organization.id}
-								/>
-								<OrganizationBuildsList
-									organizationId={organization.id}
-								/>
-							</TabsContent>
-
-							<TabsContent value="trainings" className="mt-6">
-								<OrganizationTrainingsList
-									organizationId={organization.id}
-									trainings={organization.trainings}
-								/>
-							</TabsContent>
-						</Tabs>
+						<CurrentOrganizationDetails
+							organization={organization}
+						/>
+						<CurrentOrganizationMembersTable
+							members={organization.members}
+						/>
+						<CurrentOrganizationBuildsOverview
+							organizationId={organization.id}
+						/>
 					</div>
 				) : (
 					<Alert variant="destructive">
