@@ -31,7 +31,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useOrganizations } from "@/hooks/useOrganizations";
+import { useOrganizations } from "@/lib/hooks/useOrganizations";
 
 export default function OrganizationsList() {
 	const router = useRouter();

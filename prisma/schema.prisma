@@ -7,6 +7,7 @@ datasource db {
 // Définition du générateur de client
 generator client {
     provider = "prisma-client-js"
+    output   = "./generated/client"
 }
 
 // Modèle utilisateur
