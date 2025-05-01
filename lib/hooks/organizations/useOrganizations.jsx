@@ -1,3 +1,4 @@
+//lib/hooks/organizations/useOrganizations.jsx
 // hooks/useOrganizations.js
 "use client";
 
@@ -82,37 +83,6 @@ export function useOrganizations(id = null) {
 		}
 	}, [organizations, searchQuery]);
 
-	// Créer une nouvelle organisation
-	const createOrganization = async (organizationData) => {
-		try {
-			const response = await fetch("/api/organizations", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(organizationData),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(
-					errorData.error || "Erreur lors de la création"
-				);
-			}
-
-			const data = await response.json();
-
-			// Rafraîchir la liste
-			await fetchOrganizations();
-
-			return data.organization;
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-			return null;
-		}
-	};
-
 	// Mettre à jour une organisation
 	const updateOrganization = async (organizationData) => {
 		if (!id) return null;
@@ -183,7 +153,6 @@ export function useOrganizations(id = null) {
 		setSearchQuery,
 		refreshOrganizations: fetchOrganizations,
 		refreshOrganization: fetchOrganization,
-		createOrganization,
 		updateOrganization,
 		deleteOrganization,
 	};

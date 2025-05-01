@@ -1,12 +1,10 @@
-// components/organizations/OrganizationsHeader.jsx
-import { PlusCircle, Search, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+//components/organizations/OrganizationsHeader.jsx
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function OrganizationsHeader({
 	searchQuery = "",
 	onSearchChange = () => {},
-	onCreateClick = () => {},
 }) {
 	return (
 		<div className="space-y-4">
@@ -17,10 +15,6 @@ export default function OrganizationsHeader({
 						Gérez les organisations et leurs accès
 					</p>
 				</div>
-				<Button onClick={onCreateClick}>
-					<PlusCircle className="mr-2 h-4 w-4" />
-					Nouvelle organisation
-				</Button>
 			</div>
 
 			<div className="flex items-center gap-4">
@@ -34,7 +28,6 @@ export default function OrganizationsHeader({
 						onChange={(e) => onSearchChange(e.target.value)}
 					/>
 				</div>
-				<Button variant="outline">Filtres</Button>
 			</div>
 		</div>
 	);

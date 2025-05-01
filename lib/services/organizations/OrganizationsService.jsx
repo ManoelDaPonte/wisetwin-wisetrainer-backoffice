@@ -1,8 +1,9 @@
+//lib/services/organizations/organizationsService.jsx
 // services/organizations/organizationsService.js
 import { prisma } from "@/lib/prisma";
 
 /**
- * Récupère toutes les organisations avec le nombre de membres et de formations
+ * Récupère toutes les organisations avec le nombre de membres
  * @param {Object} options - Options de filtrage et tri
  * @returns {Promise<Array>} Liste des organisations formatées
  */
@@ -20,7 +21,6 @@ export async function getAllOrganizations(options = {}) {
 				_count: {
 					select: {
 						members: true,
-						trainings: true,
 					},
 				},
 			},
@@ -34,7 +34,6 @@ export async function getAllOrganizations(options = {}) {
 		return organizations.map((org) => ({
 			...org,
 			membersCount: org._count.members,
-			trainingsCount: org._count.trainings,
 			_count: undefined,
 		}));
 	} catch (error) {
@@ -42,36 +41,6 @@ export async function getAllOrganizations(options = {}) {
 			"Erreur lors de la récupération des organisations:",
 			error
 		);
-		throw new Error(`Erreur: ${error.message}`);
-	}
-}
-
-/**
- * Crée une nouvelle organisation
- * @param {Object} data - Données de l'organisation
- * @returns {Promise<Object>} Organisation créée
- */
-export async function createOrganization(data) {
-	try {
-		// Validation de base
-		if (!data.name) {
-			throw new Error("Le nom de l'organisation est requis");
-		}
-
-		// Créer l'organisation
-		const organization = await prisma.organization.create({
-			data: {
-				name: data.name,
-				description: data.description || "",
-				logoUrl: data.logoUrl || null,
-				azureContainer: data.azureContainer || null,
-				isActive: data.isActive !== undefined ? data.isActive : true,
-			},
-		});
-
-		return organization;
-	} catch (error) {
-		console.error("Erreur lors de la création de l'organisation:", error);
 		throw new Error(`Erreur: ${error.message}`);
 	}
 }
@@ -94,7 +63,6 @@ export async function searchOrganizations(query) {
 				_count: {
 					select: {
 						members: true,
-						trainings: true,
 					},
 				},
 			},
@@ -103,7 +71,6 @@ export async function searchOrganizations(query) {
 		return organizations.map((org) => ({
 			...org,
 			membersCount: org._count.members,
-			trainingsCount: org._count.trainings,
 			_count: undefined,
 		}));
 	} catch (error) {

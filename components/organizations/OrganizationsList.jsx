@@ -9,7 +9,6 @@ import {
 	AlertTriangle,
 	MoreHorizontal,
 	Users,
-	BookOpen,
 	Package,
 } from "lucide-react";
 import {
@@ -31,7 +30,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useOrganizations } from "@/lib/hooks/useOrganizations";
+import { useOrganizations } from "@/lib/hooks/organizations/useOrganizations";
 
 export default function OrganizationsList() {
 	const router = useRouter();
@@ -121,14 +120,8 @@ export default function OrganizationsList() {
 			<div className="text-center py-12 border rounded-md">
 				<Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
 				<p className="text-muted-foreground mb-4">
-					Aucune organisation trouvée. Commencez par en créer une.
+					Aucune organisation trouvée.
 				</p>
-				<Button
-					variant="outline"
-					onClick={() => router.push("/organizations/create")}
-				>
-					Créer une organisation
-				</Button>
 			</div>
 		);
 	}
@@ -228,10 +221,6 @@ export default function OrganizationsList() {
 									{organizationBuilds[org.id] || 0} builds
 								</span>
 							</div>
-						</div>
-						<div className="flex items-center">
-							<BookOpen className="mr-2 h-4 w-4 text-muted-foreground" />
-							<span>{org.trainingsCount || 0} formations</span>
 						</div>
 					</CardContent>
 					<CardFooter className="border-t bg-muted/30 py-2 text-sm text-muted-foreground">
