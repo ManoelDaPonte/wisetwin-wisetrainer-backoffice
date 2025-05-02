@@ -1,4 +1,4 @@
-// app/formations/create/page.jsx
+//app/formations/create/page.jsx
 "use client";
 
 import { useState } from "react";
@@ -8,20 +8,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FormationForm from "@/components/formations/FormationForm";
-
-// Données initiales pour une nouvelle formation
-const initialFormation = {
-	formationId: "",
-	name: "",
-	description: "",
-	imageUrl: "",
-	category: "Sécurité",
-	difficulty: "Intermédiaire",
-	duration: "30 min",
-	objectMapping: {},
-	buildId: "",
-	contents: [],
-};
+import { DEFAULT_FORMATION } from "@/lib/config/formations";
 
 export default function CreateFormationPage() {
 	const router = useRouter();
@@ -87,7 +74,7 @@ export default function CreateFormationPage() {
 				)}
 
 				<FormationForm
-					initialData={initialFormation}
+					initialData={DEFAULT_FORMATION}
 					onSubmit={handleCreate}
 					isSaving={isSaving}
 					isNew={true}

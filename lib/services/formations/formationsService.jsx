@@ -10,45 +10,14 @@ export async function getAllFormations(options = {}) {
 	const { sortBy = "name", sortDirection = "asc", filter = {} } = options;
 
 	try {
-		const formations = await prisma.course.findMany({
+		const formations = await prisma.formation.findMany({
 			where: filter,
-			select: {
-				id: true,
-				name: true,
-				description: true,
-				type: true,
-				category: true,
-				createdAt: true,
-				updatedAt: true,
-				OrganizationTraining: {
-					select: {
-						id: true,
-						organizationId: true,
-						buildId: true,
-					},
-				},
-			},
 			orderBy: {
 				[sortBy]: sortDirection,
 			},
 		});
 
-		// Traiter les données pour les rendre plus adaptées au front-end
-		const processedFormations = formations.map((formation) => ({
-			id: formation.id,
-			name: formation.name,
-			description: formation.description,
-			type: formation.type || "standard",
-			category: formation.category || "non-catégorisé",
-			createdAt: formation.createdAt,
-			updatedAt: formation.updatedAt,
-			assignedOrganizationsCount: formation.OrganizationTraining.length,
-			hasAssignedBuilds: formation.OrganizationTraining.some(
-				(t) => !!t.buildId
-			),
-		}));
-
-		return processedFormations;
+		return formations;
 	} catch (error) {
 		console.error("Erreur lors de la récupération des formations:", error);
 		throw new Error(`Erreur: ${error.message}`);
@@ -62,15 +31,12 @@ export async function getAllFormations(options = {}) {
  */
 export async function getFormationById(id) {
 	try {
-		const formation = await prisma.course.findUnique({
+		const formation = await prisma.formation.findUnique({
 			where: { id },
 			include: {
-				OrganizationTraining: {
-					include: {
-						organization: true,
-						build: true,
-					},
-				},
+				builds3D: true,
+				courses: true,
+				documentation: true,
 			},
 		});
 
@@ -81,6 +47,63 @@ export async function getFormationById(id) {
 		return formation;
 	} catch (error) {
 		console.error("Erreur lors de la récupération de la formation:", error);
+		throw new Error(`Erreur: ${error.message}`);
+	}
+}
+
+/**
+ * Crée une nouvelle formation
+ * @param {Object} formationData - Données de la formation
+ * @returns {Promise<Object>} Formation créée
+ */
+export async function createFormation(formationData) {
+	try {
+		// Vérifier si l'ID externe est déjà utilisé
+		const existingFormation = await prisma.formation.findFirst({
+			where: {
+				externalId: formationData.externalId,
+			},
+		});
+
+		if (existingFormation) {
+			throw new Error("Cet identifiant externe est déjà utilisé");
+		}
+
+		// Trouver ou créer une organisation par défaut
+		let organization = await prisma.organization.findFirst();
+
+		if (!organization) {
+			// Créer une organisation par défaut si aucune n'existe
+			organization = await prisma.organization.create({
+				data: {
+					name: "Organisation par défaut",
+					description: "Organisation créée automatiquement",
+					isActive: true,
+				},
+			});
+		}
+
+		// Créer la formation en l'associant à l'organisation
+		const formation = await prisma.formation.create({
+			data: {
+				name: formationData.name,
+				externalId: formationData.externalId,
+				description: formationData.description,
+				imageUrl: formationData.imageUrl || null,
+				category: formationData.category,
+				difficulty: formationData.difficulty,
+				duration: formationData.duration,
+				isPublic: formationData.isPublic || false,
+				version: "1.0",
+				organization: {
+					connect: { id: organization.id },
+				},
+			},
+		});
+
+		return formation;
+	} catch (error) {
+		console.error("Erreur lors de la création de la formation:", error);
 		throw new Error(`Erreur: ${error.message}`);
 	}
 }

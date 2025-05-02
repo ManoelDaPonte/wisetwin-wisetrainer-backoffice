@@ -1,8 +1,8 @@
-// app/formations/page.jsx
+//app/formations/page.jsx
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/lib/hooks/auth/useAuth";
 import { Loader2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import FormationsContainer from "@/components/formations/FormationsContainer";

@@ -2,9 +2,9 @@
 import { NextResponse } from "next/server";
 import { getFormationById } from "@/lib/services/formations/formationsService";
 
-export async function GET(request, context) {
+export async function GET(request, { params }) {
 	try {
-		const { id } = await context.params;
+		const id = params.id;
 
 		if (!id) {
 			return NextResponse.json(
@@ -24,7 +24,7 @@ export async function GET(request, context) {
 					"Erreur lors de la récupération de la formation: " +
 					error.message,
 			},
-			{ status: 500 }
+			{ status: error.message.includes("non trouvée") ? 404 : 500 }
 		);
 	}
 }
