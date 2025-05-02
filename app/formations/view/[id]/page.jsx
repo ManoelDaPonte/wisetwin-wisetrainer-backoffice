@@ -7,10 +7,10 @@ import { ArrowLeft, Loader2, AlertTriangle, RefreshCcw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import FormationOverview from "@/components/formations/view/FormationOverview";
-import Formation3DModules from "@/components/formations/view/Formation3DModules";
-import FormationCourses from "@/components/formations/view/FormationCourses";
-import FormationDocumentation from "@/components/formations/view/FormationDocumentation";
+import CurrentFormationOverview from "@/components/formations/currentFormation/view/CurrentFormationOverview";
+import CurrentFormation3DModules from "@/components/formations/currentFormation/view/CurrentFormation3DModules";
+import CurrentFormationCourses from "@/components/formations/currentFormation/view/CurrentFormationCourses";
+import CurrentFormationDocumentation from "@/components/formations/currentFormation/view/CurrentFormationDocumentation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFormationDetails } from "@/lib/hooks/formations/currentFormation/useCurrentFormationDetails";
 
@@ -86,7 +86,7 @@ export default function ViewFormationPage() {
 					</Alert>
 				) : formation ? (
 					<div className="space-y-6">
-						<FormationOverview formation={formation} />
+						<CurrentFormationOverview formation={formation} />
 
 						<Tabs
 							defaultValue="overview"
@@ -114,30 +114,36 @@ export default function ViewFormationPage() {
 								value="overview"
 								className="space-y-6 mt-6"
 							>
-								<Formation3DModules
+								<CurrentFormation3DModules
 									formation={formation}
 									isPreview={true}
 								/>
-								<FormationCourses
+								<CurrentFormationCourses
 									formation={formation}
 									isPreview={true}
 								/>
-								<FormationDocumentation
+								<CurrentFormationDocumentation
 									formation={formation}
 									isPreview={true}
 								/>
 							</TabsContent>
 
 							<TabsContent value="3d" className="mt-6">
-								<Formation3DModules formation={formation} />
+								<CurrentFormation3DModules
+									formation={formation}
+								/>
 							</TabsContent>
 
 							<TabsContent value="courses" className="mt-6">
-								<FormationCourses formation={formation} />
+								<CurrentFormationCourses
+									formation={formation}
+								/>
 							</TabsContent>
 
 							<TabsContent value="docs" className="mt-6">
-								<FormationDocumentation formation={formation} />
+								<CurrentFormationDocumentation
+									formation={formation}
+								/>
 							</TabsContent>
 						</Tabs>
 					</div>
