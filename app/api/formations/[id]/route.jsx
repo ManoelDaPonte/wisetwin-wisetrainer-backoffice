@@ -1,6 +1,6 @@
 //app/api/formations/[id]/route.jsx
 import { NextResponse } from "next/server";
-import { getFormationById } from "@/lib/services/formations/formationsService";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request, { params }) {
 	try {
@@ -13,8 +13,33 @@ export async function GET(request, { params }) {
 			);
 		}
 
-		const formation = await getFormationById(id);
+		console.log(`Fetching formation with ID: ${id}`);
 
+		// Récupérer la formation avec toutes ses relations
+		const formation = await prisma.formation.findUnique({
+			where: { id },
+			include: {
+				organization: true,
+				builds3D: true,
+				courses: {
+					include: {
+						lessons: true,
+					},
+				},
+				documentation: true,
+				enrollments: true,
+			},
+		});
+
+		if (!formation) {
+			console.log(`Formation not found with ID: ${id}`);
+			return NextResponse.json(
+				{ error: "Formation non trouvée" },
+				{ status: 404 }
+			);
+		}
+
+		console.log(`Formation found: ${formation.name}`);
 		return NextResponse.json({ formation });
 	} catch (error) {
 		console.error("Erreur lors de la récupération de la formation:", error);
@@ -24,7 +49,7 @@ export async function GET(request, { params }) {
 					"Erreur lors de la récupération de la formation: " +
 					error.message,
 			},
-			{ status: error.message.includes("non trouvée") ? 404 : 500 }
+			{ status: 500 }
 		);
 	}
 }

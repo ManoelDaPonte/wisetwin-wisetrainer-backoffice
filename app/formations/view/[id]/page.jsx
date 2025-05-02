@@ -1,12 +1,12 @@
 //app/formations/view/[id]/page.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, RefreshCcw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import FormationOverview from "@/components/formations/view/FormationOverview";
 import Formation3DModules from "@/components/formations/view/Formation3DModules";
 import FormationCourses from "@/components/formations/view/FormationCourses";
@@ -18,10 +18,19 @@ export default function ViewFormationPage() {
 	const params = useParams();
 	const router = useRouter();
 	const [activeTab, setActiveTab] = useState("overview");
+	const [formationId, setFormationId] = useState(null);
+
+	// Extraire l'ID de la formation des paramètres
+	useEffect(() => {
+		if (params?.id) {
+			console.log("Formation ID from params:", params.id);
+			setFormationId(params.id);
+		}
+	}, [params]);
 
 	// Utilisation du hook personnalisé pour récupérer les détails de la formation
 	const { formation, isLoading, error, refreshFormation } =
-		useFormationDetails(params.id);
+		useFormationDetails(formationId);
 
 	const handleBack = () => {
 		router.push("/formations");
@@ -43,8 +52,37 @@ export default function ViewFormationPage() {
 					</div>
 				) : error ? (
 					<Alert variant="destructive">
-						<AlertTriangle className="h-4 w-4" />
-						<AlertDescription>{error}</AlertDescription>
+						<AlertTitle>Erreur</AlertTitle>
+						<AlertDescription className="flex flex-col gap-3">
+							<div className="flex items-center">
+								<AlertTriangle className="h-4 w-4 mr-2" />
+								{error}
+							</div>
+
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={refreshFormation}
+								>
+									<RefreshCcw className="h-4 w-4 mr-2" />
+									Réessayer
+								</Button>
+
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleBack}
+								>
+									Retour aux formations
+								</Button>
+							</div>
+
+							<div className="text-sm mt-2">
+								<p>Informations de débogage:</p>
+								<p>ID de formation: {formationId}</p>
+							</div>
+						</AlertDescription>
 					</Alert>
 				) : formation ? (
 					<div className="space-y-6">
