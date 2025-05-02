@@ -1,4 +1,4 @@
-//components/organizations/currentOrganization/OrganizationBuildsOverview.jsx
+//components/organizations/currentOrganization/CurrentOrganizationBuildsOverview.jsx
 "use client";
 
 import {
@@ -12,37 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Package, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useOrganizationBuilds } from "@/lib/hooks/builds/useOrganizationBuilds";
 
 export default function CurrentOrganizationBuildsOverview({ organizationId }) {
 	const router = useRouter();
-	const [buildsCount, setBuildsCount] = useState(0);
-	const [isLoading, setIsLoading] = useState(true);
-
-	useEffect(() => {
-		const fetchBuildsCount = async () => {
-			try {
-				const response = await fetch(
-					`/api/organizations/${organizationId}/builds/count`
-				);
-				if (response.ok) {
-					const data = await response.json();
-					setBuildsCount(data.count);
-				}
-			} catch (error) {
-				console.error(
-					"Erreur lors de la récupération du nombre de builds:",
-					error
-				);
-				setBuildsCount(0);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		if (organizationId) {
-			fetchBuildsCount();
-		}
-	}, [organizationId]);
+	const { builds, isLoading } = useOrganizationBuilds(organizationId);
+	const buildsCount = builds ? builds.length : 0;
 
 	return (
 		<Card>

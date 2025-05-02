@@ -1,24 +1,21 @@
-// hooks/useFormations.jsx
+//lib/hooks/formations/useFormations.jsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 
 export function useFormations(options = {}) {
 	const {
-		initialSearch = "",
-		sortBy = "updatedAt",
-		sortDirection = "desc",
+		initialFilters = {},
+		initialSort = { key: "name", direction: "asc" },
 	} = options;
 
 	const [formations, setFormations] = useState([]);
 	const [filteredFormations, setFilteredFormations] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const [searchQuery, setSearchQuery] = useState(initialSearch);
-	const [sortConfig, setSortConfig] = useState({
-		key: sortBy,
-		direction: sortDirection,
-	});
+	const [searchQuery, setSearchQuery] = useState("");
+	const [sortConfig, setSortConfig] = useState(initialSort);
+	const [filters, setFilters] = useState(initialFilters);
 
 	// Fonction pour charger les formations
 	const fetchFormations = useCallback(async () => {
@@ -26,7 +23,24 @@ export function useFormations(options = {}) {
 		setError(null);
 
 		try {
-			const response = await fetch("/api/formations");
+			const params = new URLSearchParams();
+
+			// Ajouter les paramètres de tri
+			if (sortConfig.key) {
+				params.append("sortBy", sortConfig.key);
+				params.append("sortDirection", sortConfig.direction);
+			}
+
+			// Ajouter les filtres
+			Object.entries(filters).forEach(([key, value]) => {
+				if (value !== undefined && value !== null && value !== "") {
+					params.append(key, value);
+				}
+			});
+
+			const response = await fetch(
+				`/api/formations?${params.toString()}`
+			);
 
 			if (!response.ok) {
 				throw new Error("Erreur lors du chargement des formations");
@@ -40,55 +54,32 @@ export function useFormations(options = {}) {
 		} finally {
 			setIsLoading(false);
 		}
-	}, []);
+	}, [sortConfig, filters]);
 
-	// Charger les formations au montage du composant
+	// Charger les formations au montage du composant ou lorsque les paramètres changent
 	useEffect(() => {
 		fetchFormations();
 	}, [fetchFormations]);
 
-	// Filtrer et trier les formations lorsque les formations, la recherche ou le tri changent
+	// Filtrer les formations par recherche
 	useEffect(() => {
-		// Filtrer les formations selon la recherche
-		let result = [...formations];
-
-		if (searchQuery.trim() !== "") {
-			const query = searchQuery.toLowerCase();
-			result = result.filter(
-				(formation) =>
-					formation.name.toLowerCase().includes(query) ||
-					formation.description.toLowerCase().includes(query) ||
-					formation.formationId.toLowerCase().includes(query) ||
-					formation.category.toLowerCase().includes(query)
-			);
+		if (!searchQuery.trim()) {
+			setFilteredFormations(formations);
+			return;
 		}
 
-		// Trier les formations
-		result.sort((a, b) => {
-			const key = sortConfig.key;
+		const query = searchQuery.toLowerCase();
+		const filtered = formations.filter(
+			(formation) =>
+				formation.name.toLowerCase().includes(query) ||
+				(formation.description &&
+					formation.description.toLowerCase().includes(query)) ||
+				(formation.category &&
+					formation.category.toLowerCase().includes(query))
+		);
 
-			// Vérifier si la propriété existe et est une date
-			if (key.endsWith("At") && a[key] && b[key]) {
-				const dateA = new Date(a[key]);
-				const dateB = new Date(b[key]);
-
-				return sortConfig.direction === "asc"
-					? dateA - dateB
-					: dateB - dateA;
-			}
-
-			// Tri normal pour les chaînes ou nombres
-			if (a[key] < b[key]) {
-				return sortConfig.direction === "asc" ? -1 : 1;
-			}
-			if (a[key] > b[key]) {
-				return sortConfig.direction === "asc" ? 1 : -1;
-			}
-			return 0;
-		});
-
-		setFilteredFormations(result);
-	}, [formations, searchQuery, sortConfig]);
+		setFilteredFormations(filtered);
+	}, [formations, searchQuery]);
 
 	// Fonction pour mettre à jour la recherche
 	const handleSearch = (query) => {
@@ -100,64 +91,16 @@ export function useFormations(options = {}) {
 		setSortConfig((prev) => ({
 			key,
 			direction:
-				prev.key === key
-					? prev.direction === "asc"
-						? "desc"
-						: "asc"
-					: "asc",
+				prev.key === key && prev.direction === "asc" ? "desc" : "asc",
 		}));
 	};
 
-	// Fonction pour supprimer une formation
-	const handleDelete = async (id) => {
-		if (
-			!window.confirm(
-				"Êtes-vous sûr de vouloir supprimer cette formation ?"
-			)
-		) {
-			return false;
-		}
-
-		try {
-			const response = await fetch(`/api/formations/${id}`, {
-				method: "DELETE",
-			});
-
-			if (!response.ok) {
-				throw new Error("Erreur lors de la suppression");
-			}
-
-			// Mettre à jour la liste
-			await fetchFormations();
-			return true;
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-			return false;
-		}
-	};
-
-	// Fonction pour dupliquer une formation
-	const handleDuplicate = async (id) => {
-		try {
-			const response = await fetch(`/api/formations/duplicate/${id}`, {
-				method: "POST",
-			});
-
-			if (!response.ok) {
-				throw new Error("Erreur lors de la duplication");
-			}
-
-			const data = await response.json();
-
-			// Mettre à jour la liste
-			await fetchFormations();
-			return data.id;
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-			return null;
-		}
+	// Fonction pour appliquer un filtre
+	const handleFilter = (filterKey, value) => {
+		setFilters((prev) => ({
+			...prev,
+			[filterKey]: value,
+		}));
 	};
 
 	return {
@@ -166,10 +109,10 @@ export function useFormations(options = {}) {
 		error,
 		searchQuery,
 		sortConfig,
+		filters,
 		handleSearch,
 		handleSort,
-		handleDelete,
-		handleDuplicate,
+		handleFilter,
 		refreshFormations: fetchFormations,
 	};
 }
@@ -208,43 +151,10 @@ export function useFormation(id) {
 		fetchFormation();
 	}, [fetchFormation]);
 
-	const updateFormation = async (formData) => {
-		if (!id) return null;
-
-		try {
-			const response = await fetch(`/api/formations/${id}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(formData),
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(
-					errorData.error || "Erreur lors de la mise à jour"
-				);
-			}
-
-			const data = await response.json();
-
-			// Mettre à jour l'état local
-			setFormation(data.formation);
-
-			return data.formation;
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-			return null;
-		}
-	};
-
 	return {
 		formation,
 		isLoading,
 		error,
 		refreshFormation: fetchFormation,
-		updateFormation,
 	};
 }

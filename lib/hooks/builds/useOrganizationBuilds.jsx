@@ -21,7 +21,6 @@ export function useOrganizationBuilds(organizationId) {
 		setError(null);
 
 		try {
-			console.log("Fetching builds for organization:", organizationId);
 			const response = await fetch(
 				`/api/organizations/${organizationId}/builds`
 			);
@@ -40,7 +39,6 @@ export function useOrganizationBuilds(organizationId) {
 			}
 
 			const data = await response.json();
-			console.log("Builds received:", data); // Debug
 
 			setBuilds(data.builds || []);
 		} catch (err) {
@@ -109,6 +107,39 @@ export function useOrganizationBuilds(organizationId) {
 		}
 	};
 
+	// Nouvelle fonction pour assigner un build à une formation
+	const assignBuildToFormation = async (buildId, formationId) => {
+		setError(null);
+
+		try {
+			const response = await fetch(
+				`/api/organizations/${organizationId}/builds/${buildId}/assign`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ courseId: formationId }),
+				}
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(
+					errorData.error || "Erreur lors de l'assignation"
+				);
+			}
+
+			// Rafraîchir la liste après assignation
+			await fetchBuilds();
+			return true;
+		} catch (err) {
+			console.error("Erreur d'assignation:", err);
+			setError(err.message);
+			return false;
+		}
+	};
+
 	return {
 		builds,
 		isLoading,
@@ -116,6 +147,7 @@ export function useOrganizationBuilds(organizationId) {
 		uploadProgress,
 		isUploading,
 		uploadBuild,
+		assignBuildToFormation,
 		refreshBuilds: fetchBuilds,
 	};
 }

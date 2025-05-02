@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, AlertTriangle, Edit } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,10 +22,6 @@ export default function OrganizationDetailsPage() {
 		router.push("/organizations");
 	};
 
-	const handleEdit = () => {
-		router.push(`/organizations/edit/${params.id}`);
-	};
-
 	return (
 		<AdminLayout>
 			<div className="space-y-6">
@@ -34,13 +30,6 @@ export default function OrganizationDetailsPage() {
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Retour aux organisations
 					</Button>
-
-					{organization && (
-						<Button onClick={handleEdit}>
-							<Edit className="mr-2 h-4 w-4" />
-							Modifier
-						</Button>
-					)}
 				</div>
 
 				{isLoading ? (

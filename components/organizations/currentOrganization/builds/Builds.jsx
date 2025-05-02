@@ -8,7 +8,8 @@ import {
 	AlertTriangle,
 	Package,
 	Search,
-	Link,
+	Link as LinkIcon,
+	PlusCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,13 +32,34 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useOrganizationBuilds } from "@/lib/hooks/builds/useOrganizationBuilds";
 import BuildUploadDialog from "./BuildUploadDialog";
+import BuildAssignFormationDialog from "./BuildAssignFormationDialog";
 
 export default function OrganizationBuilds({ organization }) {
 	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+	const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+	const [selectedBuild, setSelectedBuild] = useState(null);
 	const [searchQuery, setSearchQuery] = useState("");
-	const { builds, isLoading, error, uploadBuild } = useOrganizationBuilds(
-		organization?.id
-	);
+	const {
+		builds,
+		isLoading,
+		error,
+		uploadBuild,
+		assignBuildToFormation,
+		refreshBuilds,
+	} = useOrganizationBuilds(organization?.id);
+
+	const handleAssignClick = (build) => {
+		setSelectedBuild(build);
+		setIsAssignDialogOpen(true);
+	};
+
+	const handleAssignConfirm = async (formationId) => {
+		if (selectedBuild && formationId) {
+			await assignBuildToFormation(selectedBuild.id, formationId);
+			setIsAssignDialogOpen(false);
+			refreshBuilds();
+		}
+	};
 
 	if (isLoading) {
 		return (
@@ -128,9 +150,6 @@ export default function OrganizationBuilds({ organization }) {
 									<TableHead>Taille</TableHead>
 									<TableHead>Statut</TableHead>
 									<TableHead>Formation associée</TableHead>
-									<TableHead className="text-right">
-										Actions
-									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -161,7 +180,12 @@ export default function OrganizationBuilds({ organization }) {
 												variant={
 													build.status === "assigned"
 														? "default"
-														: "secondary"
+														: "destructive"
+												}
+												className={
+													build.status === "assigned"
+														? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+														: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
 												}
 											>
 												{build.status === "assigned"
@@ -178,24 +202,27 @@ export default function OrganizationBuilds({ organization }) {
 															<Badge
 																key={index}
 																variant="outline"
-																className="flex items-center gap-1"
+																className="flex items-center gap-1 bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
 															>
-																<Link className="h-3 w-3" />
+																<LinkIcon className="h-3 w-3" />
 																{course.name}
 															</Badge>
 														)
 													)}
 												</div>
 											) : (
-												<span className="text-muted-foreground">
-													-
-												</span>
+												<Button
+													variant="outline"
+													size="sm"
+													className="flex items-center text-muted-foreground"
+													onClick={() =>
+														handleAssignClick(build)
+													}
+												>
+													<PlusCircle className="h-3 w-3 mr-1" />
+													Assigner
+												</Button>
 											)}
-										</TableCell>
-										<TableCell className="text-right">
-											<Button variant="ghost" size="sm">
-												Détails
-											</Button>
 										</TableCell>
 									</TableRow>
 								))}
@@ -210,6 +237,15 @@ export default function OrganizationBuilds({ organization }) {
 				onClose={() => setIsUploadDialogOpen(false)}
 				onUpload={uploadBuild}
 			/>
+
+			{selectedBuild && (
+				<BuildAssignFormationDialog
+					isOpen={isAssignDialogOpen}
+					onClose={() => setIsAssignDialogOpen(false)}
+					onAssign={handleAssignConfirm}
+					build={selectedBuild}
+				/>
+			)}
 		</div>
 	);
 }

@@ -14,10 +14,7 @@ export async function GET(request, context) {
 			);
 		}
 
-		console.log("Fetching builds for organization:", organizationId); // Debug
-
 		const builds = await getOrganizationBuilds(organizationId);
-		console.log("Builds found:", builds.length); // Debug
 
 		return NextResponse.json({ builds });
 	} catch (error) {
