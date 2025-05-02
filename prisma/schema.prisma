@@ -1,8 +1,9 @@
-// This is your Prisma schema file,
+// This is your Prisma schema file
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// ========================================================
 // CONFIGURATION DE BASE
-// ====================
+// ========================================================
 generator client {
     provider = "prisma-client-js"
 }
@@ -12,200 +13,310 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-// ENTITÉS PRINCIPALES
-// ==================
+// ========================================================
+// MODULE UTILISATEUR
+// ========================================================
 
-// Utilisateur du système
-// Un utilisateur peut appartenir à plusieurs organisations ou à aucune
-// Il peut suivre plusieurs formations et obtenir des certifications
 model User {
     id        String   @id @default(uuid())
     email     String   @unique
     name      String?
-    auth0Id   String   @unique // Identifiant externe d'authentification
+    auth0Id   String   @unique
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
     // Relations
-    organizations  OrganizationMember[] // Relation avec les organisations (0 à N)
-    formations     UserFormation[] // Formations suivies
-    certifications UserCertification[] // Certifications obtenues
+    organizations    OrganizationMember[]
+    formationEnrolls FormationEnrollment[]
+    certifications   Certification[]
 }
 
-// Organisation cliente
-// Représente une entreprise cliente qui peut avoir plusieurs utilisateurs
-// et plusieurs builds (environnements 3D)
+// ========================================================
+// MODULE ORGANISATION
+// ========================================================
+
 model Organization {
     id             String   @id @default(uuid())
     name           String
     description    String?
     logoUrl        String?
-    azureContainer String? // Container Azure pour stocker les builds
+    azureContainer String?
     isActive       Boolean  @default(true)
+    isPublic       Boolean  @default(false) // Indique si l'organisation est publique
     createdAt      DateTime @default(now())
     updatedAt      DateTime @updatedAt
 
     // Relations
-    members OrganizationMember[] // Membres de l'organisation
-    builds  Build[] // Builds appartenant à cette organisation
+    members                OrganizationMember[]
+    formations             Formation[]
+    OrganizationInvitation OrganizationInvitation[]
 }
 
-// Membre d'une organisation
-// Table de jointure entre User et Organization
-// Permet de définir le rôle d'un utilisateur dans une organisation
 model OrganizationMember {
     id       String   @id @default(uuid())
     role     String // OWNER, ADMIN, MEMBER, etc.
     joinedAt DateTime @default(now())
 
-    // Relations (clés étrangères)
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+    // Relations
+    userId         String
+    user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     organizationId String
     organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-    // Contrainte d'unicité: un utilisateur ne peut être qu'une fois dans une organisation
     @@unique([userId, organizationId])
 }
 
-// Build Unity
-// Représente un build 3D stocké sur Azure
-// Appartient à une organisation et peut être lié à une formation
-model Build {
+model OrganizationInvitation {
+    id         String   @id @default(uuid())
+    email      String
+    inviteCode String   @unique
+    status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
+    role       String // ADMIN, MEMBER
+    invitedBy  String // ID de l'utilisateur qui a envoyé l'invitation
+    invitedAt  DateTime @default(now())
+    expiresAt  DateTime
+
+    // Relations
+    organizationId String
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    @@index([email])
+    @@index([organizationId])
+}
+
+// ========================================================
+// MODULE FORMATION
+// ========================================================
+
+model Formation {
+    id          String   @id @default(uuid())
+    externalId  String   @unique // ID métier (ex: "LOTO_Acces_Zone_Robot")
+    name        String
+    description String
+    imageUrl    String?
+    category    String // Sécurité, Qualité, etc.
+    difficulty  String // Débutant, Intermédiaire, Avancé
+    duration    String? // Durée estimée (optionnelle)
+    version     String   @default("1.0")
+    isActive    Boolean  @default(true)
+    isPublic    Boolean  @default(false) // Formations accessibles à tous les utilisateurs
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    organizationId String
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    // Composants de formation (tous optionnels)
+    builds3D      Build3D[]
+    courses       Course[]
+    documentation Documentation[]
+
+    // Autres relations
+    enrollments    FormationEnrollment[]
+    certifications Certification[]
+}
+
+// ========================================================
+// COMPOSANTS DE FORMATION
+// ========================================================
+
+// Composant 1: Environnement 3D interactif
+model Build3D {
     id            String   @id @default(uuid())
     name          String
     version       String
     description   String?
     containerName String // Nom du container Azure
-    externalId    String? // ID externe (référence sur Azure)
-    status        String   @default("available") // available, deprecated, etc.
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
-
-    // Relations
-    organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    // Relation optionnelle avec Formation (un build peut avoir 0 ou 1 formation)
-    formationId String?
-    formation   Formation? @relation(fields: [formationId], references: [id])
-
-    // Les utilisateurs qui suivent ce build
-    userFormations UserFormation[]
-}
-
-// FORMATIONS ET CONTENU
-// ====================
-
-// Formation
-// Représente une formation complète avec son contenu pédagogique
-// Peut être liée à plusieurs builds
-model Formation {
-    id            String   @id @default(uuid())
-    formationId   String   @unique // ID externe (ex: "LOTO_Acces_Zone_Robot")
-    name          String
-    description   String
-    imageUrl      String?
-    category      String // Sécurité, Qualité, etc.
-    difficulty    String // Débutant, Intermédiaire, Avancé
-    duration      String // Durée estimée (ex: "45 min")
+    azureUrl      String // URL de l'environnement 3D
+    status        String   @default("in_development") // in_development, available, deprecated, etc.
     objectMapping Json? // Mapping des objets 3D (stocké en JSON)
-    version       String   @default("1.0")
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
 
     // Relations
-    modules        FormationModule[] // Modules de la formation
-    builds         Build[] // Builds associés à cette formation
-    certifications UserCertification[] // Certifications délivrées pour cette formation
+    formationId  String
+    formation    Formation         @relation(fields: [formationId], references: [id], onDelete: Cascade)
+    modules3D    Module3D[] // Un build peut avoir 0 à N modules
+    userProgress Build3DProgress[]
 }
 
-// Module de formation
-// Représente un module/chapitre d'une formation
-// Peut être de type "guide" (étapes guidées) ou "question" (questionnaire)
-model FormationModule {
+model Module3D {
     id          String   @id @default(uuid())
-    moduleId    String // ID externe (ex: "controller-guide")
+    moduleId    String // ID externe
     title       String
     description String?
-    type        String // "guide" ou "question"
-    order       Int // Ordre d'affichage dans la formation
-    content     Json // Contenu détaillé (étapes, questions, etc.) en JSON
+    type        String // "guide" ou "quiz"
+    order       Int // Ordre d'affichage
+    content     Json // Étapes, questions, etc. en JSON
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    build3DId   String
+    build3D     Build3D            @relation(fields: [build3DId], references: [id], onDelete: Cascade)
+    progression Module3DProgress[]
+
+    @@unique([build3DId, moduleId])
+}
+
+// Composant 2: Cours théoriques
+model Course {
+    id          String   @id @default(uuid())
+    title       String
+    description String
+    order       Int // Ordre dans la formation
+    duration    String? // Durée estimée
+    status      String   @default("draft") // draft, published, archived
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    formationId  String
+    formation    Formation        @relation(fields: [formationId], references: [id], onDelete: Cascade)
+    lessons      Lesson[] // Un cours peut avoir 0 à N leçons
+    userProgress CourseProgress[]
+}
+
+model Lesson {
+    id        String   @id @default(uuid())
+    title     String
+    content   String // Contenu de la leçon (markdown ou HTML)
+    mediaUrl  String? // URL d'une vidéo ou image
+    order     Int // Ordre dans le cours
+    duration  String? // Durée estimée
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    courseId    String
+    course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    progression LessonProgress[]
+}
+
+// Composant 3: Documentation
+model Documentation {
+    id          String   @id @default(uuid())
+    title       String
+    description String?
+    type        String // "article", "resource", "FAQ", etc.
+    content     String // Contenu (markdown ou HTML)
+    order       Int? // Ordre optionnel
+    isActive    Boolean  @default(true)
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
 
     // Relations
     formationId String
     formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
-
-    // Relation avec la progression des utilisateurs
-    userProgresses UserModuleProgress[]
-
-    // Contrainte d'unicité: un moduleId doit être unique au sein d'une formation
-    @@unique([formationId, moduleId])
 }
 
+// ========================================================
 // PROGRESSION UTILISATEUR
-// ======================
+// ========================================================
 
-// Inscription d'un utilisateur à une formation
-// Représente l'enregistrement d'un utilisateur à une formation via un build spécifique
-model UserFormation {
+model FormationEnrollment {
     id             String    @id @default(uuid())
     startedAt      DateTime  @default(now())
     lastAccessedAt DateTime  @default(now())
-    completedAt    DateTime? // null si la formation n'est pas terminée
+    completedAt    DateTime?
+    currentStatus  String    @default("in_progress") // in_progress, completed, abandoned
 
     // Relations
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    formationId String
+    formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
 
-    buildId String
-    build   Build  @relation(fields: [buildId], references: [id])
+    // Progression dans les différents composants
+    build3DProgress Build3DProgress[]
+    courseProgress  CourseProgress[]
 
-    // Progression dans les modules
-    moduleProgresses UserModuleProgress[]
-
-    // Contrainte d'unicité: un utilisateur ne peut s'inscrire qu'une fois à un build spécifique
-    @@unique([userId, buildId])
+    @@unique([userId, formationId])
 }
 
-// Progression d'un utilisateur dans un module
-// Suivi de la progression et du score pour chaque module
-model UserModuleProgress {
+// Progression dans les environnements 3D
+model Build3DProgress {
+    id           String    @id @default(uuid())
+    startedAt    DateTime  @default(now())
+    lastAccessAt DateTime  @default(now())
+    completedAt  DateTime?
+
+    // Relations
+    enrollmentId   String
+    enrollment     FormationEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+    build3DId      String
+    build3D        Build3D             @relation(fields: [build3DId], references: [id])
+    moduleProgress Module3DProgress[]
+
+    @@unique([enrollmentId, build3DId])
+}
+
+model Module3DProgress {
     id          String    @id @default(uuid())
     isCompleted Boolean   @default(false)
     score       Int? // Score obtenu (si applicable)
     startedAt   DateTime  @default(now())
-    completedAt DateTime? // null si le module n'est pas terminé
+    completedAt DateTime?
 
     // Relations
-    userFormationId String
-    userFormation   UserFormation @relation(fields: [userFormationId], references: [id], onDelete: Cascade)
+    progressId String
+    progress   Build3DProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+    moduleId   String
+    module     Module3D        @relation(fields: [moduleId], references: [id])
 
-    moduleId String
-    module   FormationModule @relation(fields: [moduleId], references: [id])
-
-    // Contrainte d'unicité: un module ne peut être suivi qu'une fois par inscription
-    @@unique([userFormationId, moduleId])
+    @@unique([progressId, moduleId])
 }
 
-// Certification obtenue par un utilisateur
-// Représente un certificat délivré à un utilisateur pour une formation
-model UserCertification {
-    id               String    @id @default(uuid())
-    obtainedAt       DateTime  @default(now())
-    expiresAt        DateTime? // Date d'expiration (si applicable)
-    formationVersion String // Version de la formation pour laquelle la certification a été obtenue
+// Progression dans les cours
+model CourseProgress {
+    id           String    @id @default(uuid())
+    startedAt    DateTime  @default(now())
+    lastAccessAt DateTime  @default(now())
+    completedAt  DateTime?
 
     // Relations
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    enrollmentId   String
+    enrollment     FormationEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+    courseId       String
+    course         Course              @relation(fields: [courseId], references: [id])
+    lessonProgress LessonProgress[]
 
+    @@unique([enrollmentId, courseId])
+}
+
+model LessonProgress {
+    id          String    @id @default(uuid())
+    isCompleted Boolean   @default(false)
+    startedAt   DateTime  @default(now())
+    completedAt DateTime?
+
+    // Relations
+    progressId String
+    progress   CourseProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+    lessonId   String
+    lesson     Lesson         @relation(fields: [lessonId], references: [id])
+
+    @@unique([progressId, lessonId])
+}
+
+// ========================================================
+// CERTIFICATION
+// ========================================================
+
+model Certification {
+    id               String    @id @default(uuid())
+    obtainedAt       DateTime  @default(now())
+    expiresAt        DateTime?
+    formationVersion String
+
+    // Relations
+    userId      String
+    user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
     formationId String
     formation   Formation @relation(fields: [formationId], references: [id])
 
-    // Contrainte d'unicité: un utilisateur ne peut obtenir qu'une certification par version de formation
     @@unique([userId, formationId, formationVersion])
 }
