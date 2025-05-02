@@ -1,65 +1,30 @@
-// app/formations/view/[id]/page.jsx
+//app/formations/view/[id]/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, AlertTriangle, Edit } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import FormationViewDetails from "@/components/formations/FormationViewDetails";
-import FormationContentsList from "@/components/formations/FormationContentsList";
-import BuildSelector from "@/components/formations/BuildSelector";
+import FormationOverview from "@/components/formations/view/FormationOverview";
+import Formation3DModules from "@/components/formations/view/Formation3DModules";
+import FormationCourses from "@/components/formations/view/FormationCourses";
+import FormationDocumentation from "@/components/formations/view/FormationDocumentation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFormationDetails } from "@/lib/hooks/formations/currentFormation/useCurrentFormationDetails";
 
 export default function ViewFormationPage() {
 	const params = useParams();
 	const router = useRouter();
-	const [formation, setFormation] = useState(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState(null);
+	const [activeTab, setActiveTab] = useState("overview");
 
-	useEffect(() => {
-		if (!params.id) return;
-
-		fetchFormation();
-	}, [params.id]);
-
-	const fetchFormation = async () => {
-		setIsLoading(true);
-		setError(null);
-
-		try {
-			const response = await fetch(`/api/formations/${params.id}`);
-
-			if (!response.ok) {
-				throw new Error(
-					"Erreur lors de la récupération de la formation"
-				);
-			}
-
-			const data = await response.json();
-			setFormation(data.formation);
-		} catch (err) {
-			console.error("Erreur:", err);
-			setError(err.message);
-		} finally {
-			setIsLoading(false);
-		}
-	};
+	// Utilisation du hook personnalisé pour récupérer les détails de la formation
+	const { formation, isLoading, error, refreshFormation } =
+		useFormationDetails(params.id);
 
 	const handleBack = () => {
 		router.push("/formations");
-	};
-
-	const handleEdit = () => {
-		router.push(`/formations/edit/${params.id}`);
-	};
-
-	const handleBuildAssigned = (buildId) => {
-		setFormation((prev) => ({
-			...prev,
-			buildId: buildId,
-		}));
 	};
 
 	return (
@@ -70,13 +35,6 @@ export default function ViewFormationPage() {
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Retour aux formations
 					</Button>
-
-					{formation && (
-						<Button onClick={handleEdit}>
-							<Edit className="mr-2 h-4 w-4" />
-							Modifier
-						</Button>
-					)}
 				</div>
 
 				{isLoading ? (
@@ -89,22 +47,61 @@ export default function ViewFormationPage() {
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				) : formation ? (
-					<div className="space-y-8">
-						<FormationViewDetails formation={formation} />
+					<div className="space-y-6">
+						<FormationOverview formation={formation} />
 
-						{/* Intégration du sélecteur de build */}
-						<div className="border rounded-lg p-6 bg-card">
-							<h2 className="text-xl font-semibold mb-4">
-								Association aux builds Unity
-							</h2>
-							<BuildSelector
-								formationId={formation.id}
-								currentBuildId={formation.buildId}
-								onAssign={handleBuildAssigned}
-							/>
-						</div>
+						<Tabs
+							defaultValue="overview"
+							value={activeTab}
+							onValueChange={setActiveTab}
+						>
+							<TabsList className="w-full">
+								<TabsTrigger value="overview">
+									Vue d'ensemble
+								</TabsTrigger>
+								<TabsTrigger value="3d">
+									Modules 3D (
+									{formation.builds3D?.length || 0})
+								</TabsTrigger>
+								<TabsTrigger value="courses">
+									Cours ({formation.courses?.length || 0})
+								</TabsTrigger>
+								<TabsTrigger value="docs">
+									Documentation (
+									{formation.documentation?.length || 0})
+								</TabsTrigger>
+							</TabsList>
 
-						<FormationContentsList contents={formation.contents} />
+							<TabsContent
+								value="overview"
+								className="space-y-6 mt-6"
+							>
+								<Formation3DModules
+									formation={formation}
+									isPreview={true}
+								/>
+								<FormationCourses
+									formation={formation}
+									isPreview={true}
+								/>
+								<FormationDocumentation
+									formation={formation}
+									isPreview={true}
+								/>
+							</TabsContent>
+
+							<TabsContent value="3d" className="mt-6">
+								<Formation3DModules formation={formation} />
+							</TabsContent>
+
+							<TabsContent value="courses" className="mt-6">
+								<FormationCourses formation={formation} />
+							</TabsContent>
+
+							<TabsContent value="docs" className="mt-6">
+								<FormationDocumentation formation={formation} />
+							</TabsContent>
+						</Tabs>
 					</div>
 				) : (
 					<Alert variant="destructive">

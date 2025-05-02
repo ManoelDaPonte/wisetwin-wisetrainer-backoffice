@@ -15,6 +15,37 @@ export async function getAllFormations(options = {}) {
 			orderBy: {
 				[sortBy]: sortDirection,
 			},
+			include: {
+				// Inclure l'organisation associée
+				organization: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+				// Inclure les compteurs pour les différents types de contenu
+				builds3D: {
+					select: {
+						id: true,
+					},
+				},
+				courses: {
+					select: {
+						id: true,
+					},
+				},
+				documentation: {
+					select: {
+						id: true,
+					},
+				},
+				// Inclure le nombre d'inscriptions
+				enrollments: {
+					select: {
+						id: true,
+					},
+				},
+			},
 		});
 
 		return formations;
@@ -34,9 +65,11 @@ export async function getFormationById(id) {
 		const formation = await prisma.formation.findUnique({
 			where: { id },
 			include: {
+				organization: true,
 				builds3D: true,
 				courses: true,
 				documentation: true,
+				enrollments: true,
 			},
 		});
 
@@ -69,35 +102,31 @@ export async function createFormation(formationData) {
 			throw new Error("Cet identifiant externe est déjà utilisé");
 		}
 
-		// Trouver ou créer une organisation par défaut
-		let organization = await prisma.organization.findFirst();
+		// Données pour la création
+		const formationCreateData = {
+			name: formationData.name,
+			externalId: formationData.externalId,
+			description: formationData.description,
+			imageUrl: formationData.imageUrl || null,
+			category: formationData.category,
+			difficulty: formationData.difficulty,
+			duration: formationData.duration,
+			isPublic: formationData.isPublic || false,
+			version: "1.0",
+		};
 
-		if (!organization) {
-			// Créer une organisation par défaut si aucune n'existe
-			organization = await prisma.organization.create({
-				data: {
-					name: "Organisation par défaut",
-					description: "Organisation créée automatiquement",
-					isActive: true,
-				},
-			});
+		// Si une organisation est spécifiée, l'associer
+		if (formationData.organizationId) {
+			formationCreateData.organization = {
+				connect: { id: formationData.organizationId },
+			};
 		}
 
-		// Créer la formation en l'associant à l'organisation
+		// Créer la formation
 		const formation = await prisma.formation.create({
-			data: {
-				name: formationData.name,
-				externalId: formationData.externalId,
-				description: formationData.description,
-				imageUrl: formationData.imageUrl || null,
-				category: formationData.category,
-				difficulty: formationData.difficulty,
-				duration: formationData.duration,
-				isPublic: formationData.isPublic || false,
-				version: "1.0",
-				organization: {
-					connect: { id: organization.id },
-				},
+			data: formationCreateData,
+			include: {
+				organization: true,
 			},
 		});
 

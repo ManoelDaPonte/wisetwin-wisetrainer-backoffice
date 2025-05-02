@@ -140,27 +140,31 @@ export default function FormationForm({
 								Organisation (optionnelle)
 							</Label>
 							<Select
-								value={formData.organizationId || ""}
-								onValueChange={(value) =>
-									handleChange(
-										"organizationId",
-										value === "" ? null : value
-									)
-								}
+								value={formData.organizationId || "none"}
+								onValueChange={(value) => {
+									const orgId =
+										value === "none" ? null : value;
+									handleChange("organizationId", orgId);
+
+									// Si une organisation est sélectionnée, définir la formation comme privée
+									if (orgId) {
+										handleChange("isPublic", false);
+									}
+								}}
 							>
 								<SelectTrigger id="organization">
 									<SelectValue placeholder="Sélectionner une organisation (facultatif)" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">
+									<SelectItem value="none">
 										Aucune organisation
 									</SelectItem>
 									{isLoadingOrgs ? (
-										<SelectItem value="" disabled>
+										<SelectItem value="loading" disabled>
 											Chargement des organisations...
 										</SelectItem>
 									) : organizations.length === 0 ? (
-										<SelectItem value="" disabled>
+										<SelectItem value="empty" disabled>
 											Aucune organisation disponible
 										</SelectItem>
 									) : (
@@ -281,10 +285,25 @@ export default function FormationForm({
 								onCheckedChange={(checked) =>
 									handleChange("isPublic", checked)
 								}
+								disabled={!!formData.organizationId}
 							/>
-							<Label htmlFor="isPublic">
+							<Label
+								htmlFor="isPublic"
+								className={
+									formData.organizationId
+										? "text-muted-foreground"
+										: ""
+								}
+							>
 								Formation publique (accessible à tous les
 								utilisateurs)
+								{formData.organizationId && (
+									<span className="block text-xs italic mt-1">
+										Les formations associées à une
+										organisation sont automatiquement
+										privées
+									</span>
+								)}
 							</Label>
 						</div>
 					</CardContent>
