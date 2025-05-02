@@ -11,8 +11,10 @@ import CurrentFormationOverview from "@/components/formations/currentFormation/v
 import CurrentFormation3DModules from "@/components/formations/currentFormation/view/CurrentFormation3DModules";
 import CurrentFormationCourses from "@/components/formations/currentFormation/view/CurrentFormationCourses";
 import CurrentFormationDocumentation from "@/components/formations/currentFormation/view/CurrentFormationDocumentation";
+import CurrentFormationDeleteSection from "@/components/formations/currentFormation/view/CurrentFormationDeleteSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFormationDetails } from "@/lib/hooks/formations/currentFormation/useCurrentFormationDetails";
+import { useFormationActions } from "@/lib/hooks/formations/currentFormation/useCurrentFormationActions";
 
 export default function ViewFormationPage() {
 	const params = useParams();
@@ -28,9 +30,10 @@ export default function ViewFormationPage() {
 		}
 	}, [params]);
 
-	// Utilisation du hook personnalisé pour récupérer les détails de la formation
+	// Utilisation des hooks personnalisés
 	const { formation, isLoading, error, refreshFormation } =
 		useFormationDetails(formationId);
+	const { deleteFormation } = useFormationActions(formationId);
 
 	const handleBack = () => {
 		router.push("/formations");
@@ -146,6 +149,14 @@ export default function ViewFormationPage() {
 								/>
 							</TabsContent>
 						</Tabs>
+
+						{/* Ajouter la section de suppression */}
+						<div className="pt-8 mt-8 border-t">
+							<CurrentFormationDeleteSection
+								formation={formation}
+								onDelete={deleteFormation}
+							/>
+						</div>
 					</div>
 				) : (
 					<Alert variant="destructive">

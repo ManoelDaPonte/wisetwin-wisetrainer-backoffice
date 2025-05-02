@@ -1,4 +1,4 @@
-//components/formations/view/FormationOverview.jsx
+//components/formations/currentFormation/view/CurrentFormationOverview.jsx
 "use client";
 
 import {
@@ -23,11 +23,15 @@ import {
 	Box,
 	GraduationCap,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function FormationOverview({ formation }) {
+	const router = useRouter();
+
 	if (!formation) return null;
 
 	const {
+		id,
 		name,
 		description,
 		category,
@@ -47,6 +51,10 @@ export default function FormationOverview({ formation }) {
 	const formattedCreatedAt = new Date(createdAt).toLocaleDateString("fr-FR");
 	const formattedUpdatedAt = new Date(updatedAt).toLocaleDateString("fr-FR");
 
+	const handleEdit = () => {
+		router.push(`/formations/edit/${id}`);
+	};
+
 	return (
 		<Card>
 			<CardHeader className="pb-3">
@@ -59,12 +67,13 @@ export default function FormationOverview({ formation }) {
 							{description || "Aucune description"}
 						</CardDescription>
 					</div>
-					<Button variant="outline" size="sm">
+					<Button variant="outline" size="sm" onClick={handleEdit}>
 						<Pencil className="mr-2 h-4 w-4" />
 						Modifier
 					</Button>
 				</div>
 
+				{/* Le reste du code reste identique */}
 				<div className="flex flex-wrap gap-2 mt-3">
 					<Badge
 						variant="outline"
@@ -104,6 +113,7 @@ export default function FormationOverview({ formation }) {
 					</div>
 				)}
 			</CardHeader>
+			{/* Le reste du composant reste identique */}
 			<CardContent>
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div className="space-y-4">

@@ -1,7 +1,7 @@
 //components/formations/FormationForm.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +35,7 @@ export default function FormationForm({
 		name: "",
 		externalId: "",
 		description: "",
-		imageUrl: "",
+		imageUrl: "", // S'assurer que c'est une chaîne vide et non null
 		category: "Sécurité",
 		difficulty: "Intermédiaire",
 		duration: "30 min",
@@ -46,8 +46,42 @@ export default function FormationForm({
 	isSaving = false,
 	isNew = false,
 }) {
-	const [formData, setFormData] = useState(initialData);
+	// Préparer les données initiales en s'assurant que les valeurs ne sont pas null
+	const preparedInitialData = {
+		...initialData,
+		name: initialData.name || "",
+		externalId: initialData.externalId || "",
+		description: initialData.description || "",
+		imageUrl: initialData.imageUrl || "", // Convertir null en chaîne vide
+		category: initialData.category || "Sécurité",
+		difficulty: initialData.difficulty || "Intermédiaire",
+		duration: initialData.duration || "30 min",
+		isPublic:
+			initialData.isPublic === undefined ? false : initialData.isPublic,
+		organizationId: initialData.organizationId || null,
+	};
+
+	const [formData, setFormData] = useState(preparedInitialData);
 	const { organizations, isLoading: isLoadingOrgs } = useOrganizations();
+
+	// S'assurer que les données du formulaire sont mises à jour si initialData change
+	useEffect(() => {
+		setFormData({
+			...initialData,
+			name: initialData.name || "",
+			externalId: initialData.externalId || "",
+			description: initialData.description || "",
+			imageUrl: initialData.imageUrl || "", // Convertir null en chaîne vide
+			category: initialData.category || "Sécurité",
+			difficulty: initialData.difficulty || "Intermédiaire",
+			duration: initialData.duration || "30 min",
+			isPublic:
+				initialData.isPublic === undefined
+					? false
+					: initialData.isPublic,
+			organizationId: initialData.organizationId || null,
+		});
+	}, [initialData]);
 
 	const handleChange = (field, value) => {
 		setFormData((prev) => ({

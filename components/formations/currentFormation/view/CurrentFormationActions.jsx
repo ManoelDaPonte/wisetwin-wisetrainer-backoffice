@@ -1,4 +1,4 @@
-//components/formations/view/FormationActions.jsx
+//components/formations/currentFormation/view/CurrentFormationActions.jsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -45,6 +45,7 @@ export default function FormationActions({
 		router.push(`/formations/edit/${formation.id}`);
 	};
 
+	// Le reste du composant reste identique
 	const handleExport = async () => {
 		if (onExport) {
 			onExport(formation.id);
@@ -133,6 +134,10 @@ export default function FormationActions({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={handleEdit}>
+							<Pencil className="mr-2 h-4 w-4" />
+							Modifier
+						</DropdownMenuItem>
 						<DropdownMenuItem onClick={handleDuplicate}>
 							<Copy className="mr-2 h-4 w-4" />
 							Dupliquer

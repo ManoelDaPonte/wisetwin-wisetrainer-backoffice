@@ -3,49 +3,37 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertTriangle, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import FormationForm from "@/components/formations/FormationForm";
+import { useFormationDetails } from "@/lib/hooks/formations/currentFormation/useCurrentFormationDetails";
+import { useFormationUpdate } from "@/lib/hooks/formations/currentFormation/useCurrentFormationUpdate";
 
 export default function EditFormationPage() {
 	const params = useParams();
 	const router = useRouter();
-	const [formation, setFormation] = useState(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState(null);
-
-	useEffect(() => {
-		if (!params.id) return;
-
-		const fetchFormation = async () => {
-			setIsLoading(true);
-			setError(null);
-
-			try {
-				const response = await fetch(`/api/formations/${params.id}`);
-
-				if (!response.ok) {
-					throw new Error(
-						"Erreur lors de la récupération de la formation"
-					);
-				}
-
-				const data = await response.json();
-				setFormation(data.formation);
-			} catch (err) {
-				console.error("Erreur:", err);
-				setError(err.message);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		fetchFormation();
-	}, [params.id]);
+	const { formation, isLoading, error, refreshFormation } =
+		useFormationDetails(params.id);
+	const { updateFormation, isUpdating, updateError } = useFormationUpdate();
+	const [formSubmitted, setFormSubmitted] = useState(false);
 
 	const handleBack = () => {
 		router.push("/formations");
+	};
+
+	const handleUpdate = async (formData) => {
+		const success = await updateFormation(params.id, formData);
+		if (success) {
+			setFormSubmitted(true);
+			// Refresh the formation data
+			refreshFormation();
+			// Redirect to view page after brief delay
+			setTimeout(() => {
+				router.push(`/formations/view/${params.id}`);
+			}, 1500);
+		}
 	};
 
 	return (
@@ -70,11 +58,33 @@ export default function EditFormationPage() {
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				) : formation ? (
-					<div className="text-center py-8">
-						<p className="text-muted-foreground">
-							Fonctionnalité d'édition en cours de développement.
-						</p>
-					</div>
+					<>
+						{updateError && (
+							<Alert variant="destructive">
+								<AlertTriangle className="h-4 w-4" />
+								<AlertDescription>
+									{updateError}
+								</AlertDescription>
+							</Alert>
+						)}
+
+						{formSubmitted && (
+							<Alert className="bg-green-50 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+								<Save className="h-4 w-4" />
+								<AlertDescription>
+									Formation mise à jour avec succès !
+									Redirection...
+								</AlertDescription>
+							</Alert>
+						)}
+
+						<FormationForm
+							initialData={formation}
+							onSubmit={handleUpdate}
+							isSaving={isUpdating}
+							isNew={false}
+						/>
+					</>
 				) : (
 					<Alert variant="destructive">
 						<AlertTriangle className="h-4 w-4" />

@@ -136,3 +136,74 @@ export async function createFormation(formationData) {
 		throw new Error(`Erreur: ${error.message}`);
 	}
 }
+
+/**
+ * Met à jour une formation existante
+ * @param {string} id - ID de la formation à mettre à jour
+ * @param {Object} formationData - Données à mettre à jour
+ * @returns {Promise<Object>} Formation mise à jour
+ */
+export async function updateFormation(id, formationData) {
+	try {
+		// Vérifier si l'externalId est modifié et s'il est déjà utilisé
+		if (formationData.externalId) {
+			const existingFormation = await prisma.formation.findFirst({
+				where: {
+					externalId: formationData.externalId,
+					id: { not: id },
+				},
+			});
+
+			if (existingFormation) {
+				throw new Error(
+					"Cet identifiant externe est déjà utilisé par une autre formation"
+				);
+			}
+		}
+
+		// Données pour la mise à jour
+		const formationUpdateData = {
+			name: formationData.name,
+			description: formationData.description,
+			imageUrl: formationData.imageUrl,
+			category: formationData.category,
+			difficulty: formationData.difficulty,
+			duration: formationData.duration,
+			isPublic: formationData.isPublic,
+		};
+
+		// Si l'identifiant externe est fourni, le mettre à jour
+		if (formationData.externalId) {
+			formationUpdateData.externalId = formationData.externalId;
+		}
+
+		// Mettre à jour l'organisation si nécessaire
+		if (formationData.organizationId !== undefined) {
+			if (formationData.organizationId) {
+				// Connecter à une organisation
+				formationUpdateData.organization = {
+					connect: { id: formationData.organizationId },
+				};
+			} else {
+				// Déconnecter de l'organisation actuelle
+				formationUpdateData.organization = {
+					disconnect: true,
+				};
+			}
+		}
+
+		// Mettre à jour la formation
+		const formation = await prisma.formation.update({
+			where: { id },
+			data: formationUpdateData,
+			include: {
+				organization: true,
+			},
+		});
+
+		return formation;
+	} catch (error) {
+		console.error("Erreur lors de la mise à jour de la formation:", error);
+		throw new Error(`Erreur: ${error.message}`);
+	}
+}
