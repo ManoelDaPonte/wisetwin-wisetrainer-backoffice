@@ -16,7 +16,7 @@ export function useFormationActions(formationId) {
 
 		try {
 			const response = await fetch(
-				`/api/formations/export/${formationId}`
+				`/api/formations/${formationId}/export`
 			);
 
 			if (!response.ok) {
@@ -57,7 +57,7 @@ export function useFormationActions(formationId) {
 
 		try {
 			const response = await fetch(
-				`/api/formations/duplicate/${formationId}`,
+				`/api/formations/${formationId}/duplicate`,
 				{
 					method: "POST",
 				}
@@ -72,7 +72,7 @@ export function useFormationActions(formationId) {
 			const data = await response.json();
 
 			// Rediriger vers la nouvelle formation
-			router.push(`/formations/view/${data.formation.id}`);
+			router.push(`/formations/${data.formation.id}`);
 
 			return data.formation;
 		} catch (err) {

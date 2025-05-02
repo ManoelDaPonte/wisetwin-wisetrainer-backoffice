@@ -47,7 +47,7 @@ export default function FormationsGrid({ formations = [] }) {
 					key={formation.id}
 					className="hover-lift transition-all overflow-hidden cursor-pointer"
 					onClick={() =>
-						router.push(`/formations/view/${formation.id}`)
+						router.push(`/formations/${formation.id}`)
 					}
 				>
 					<CardHeader className="pb-2">

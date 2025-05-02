@@ -32,15 +32,15 @@ export default function FormationDocumentation({
 
 	const handleAddDocument = () => {
 		// Rediriger vers la page d'ajout ou ouvrir un modal
-		router.push(`/formations/edit/${formation.id}/add-documentation`);
+		router.push(`/formations/${formation.id}/content/documentation/add`);
 	};
 
 	const handleEditDocument = (docId) => {
-		router.push(`/formations/edit/${formation.id}/documentation/${docId}`);
+		router.push(`/formations/${formation.id}/content/documentation/${docId}/edit`);
 	};
 
 	const handleViewDocument = (docId) => {
-		router.push(`/formations/view/${formation.id}/documentation/${docId}`);
+		router.push(`/formations/${formation.id}/content/documentation/${docId}`);
 	};
 
 	// Pour l'aperçu, afficher uniquement les 2 premiers documents
@@ -171,7 +171,7 @@ export default function FormationDocumentation({
 						size="sm"
 						className="ml-auto"
 						onClick={() =>
-							router.push(`/formations/view/${formation.id}`)
+							router.push(`/formations/${formation.id}/content/documentation`)
 						}
 					>
 						Voir toute la documentation ({documentation.length})

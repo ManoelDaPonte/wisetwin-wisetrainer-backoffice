@@ -42,7 +42,7 @@ export default function FormationActions({
 	const [error, setError] = useState(null);
 
 	const handleEdit = () => {
-		router.push(`/formations/edit/${formation.id}`);
+		router.push(`/formations/${formation.id}/edit`);
 	};
 
 	// Le reste du composant reste identique
@@ -53,7 +53,7 @@ export default function FormationActions({
 			// Implémentation par défaut
 			try {
 				const response = await fetch(
-					`/api/formations/export/${formation.id}`
+					`/api/formations/${formation.id}/export`
 				);
 
 				if (!response.ok) {
@@ -89,7 +89,7 @@ export default function FormationActions({
 			onDuplicate(formation.id);
 		} else {
 			// Implémentation par défaut
-			router.push(`/formations/duplicate/${formation.id}`);
+			router.push(`/formations/${formation.id}/duplicate`);
 		}
 	};
 

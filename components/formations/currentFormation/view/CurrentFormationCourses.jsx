@@ -28,15 +28,15 @@ export default function FormationCourses({ formation, isPreview = false }) {
 
 	const handleAddCourse = () => {
 		// Rediriger vers la page d'ajout ou ouvrir un modal
-		router.push(`/formations/edit/${formation.id}/add-course`);
+		router.push(`/formations/${formation.id}/content/courses/add`);
 	};
 
 	const handleEditCourse = (courseId) => {
-		router.push(`/formations/edit/${formation.id}/course/${courseId}`);
+		router.push(`/formations/${formation.id}/content/courses/${courseId}/edit`);
 	};
 
 	const handleViewCourse = (courseId) => {
-		router.push(`/formations/view/${formation.id}/course/${courseId}`);
+		router.push(`/formations/${formation.id}/content/courses/${courseId}`);
 	};
 
 	// Pour l'aperçu, afficher uniquement les 2 premiers cours
@@ -176,7 +176,7 @@ export default function FormationCourses({ formation, isPreview = false }) {
 						size="sm"
 						className="ml-auto"
 						onClick={() =>
-							router.push(`/formations/view/${formation.id}`)
+							router.push(`/formations/${formation.id}/content/courses`)
 						}
 					>
 						Voir tous les cours ({courses.length})

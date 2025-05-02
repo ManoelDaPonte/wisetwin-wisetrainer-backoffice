@@ -42,8 +42,8 @@ export default function CreateFormationPage() {
 
 			const data = await response.json();
 
-			// Création réussie, redirection vers la page d'édition
-			router.push(`/formations/edit/${data.formation.id}`);
+			// Création réussie, redirection vers la page de détails de la formation
+			router.push(`/formations/${data.formation.id}`);
 		} catch (err) {
 			console.error("Erreur:", err);
 			setError(err.message);

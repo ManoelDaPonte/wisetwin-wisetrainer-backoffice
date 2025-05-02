@@ -1,7 +1,7 @@
-//app/formations/edit/[id]/page.jsx
+//app/formations/[id]/edit/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, AlertTriangle, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -14,13 +14,12 @@ import { useFormationUpdate } from "@/lib/hooks/formations/currentFormation/useC
 export default function EditFormationPage() {
 	const params = useParams();
 	const router = useRouter();
-	const { formation, isLoading, error, refreshFormation } =
-		useFormationDetails(params.id);
+	const { formation, isLoading, error, refreshFormation } = useFormationDetails(params.id);
 	const { updateFormation, isUpdating, updateError } = useFormationUpdate();
 	const [formSubmitted, setFormSubmitted] = useState(false);
 
 	const handleBack = () => {
-		router.push("/formations");
+		router.push(`/formations/${params.id}`);
 	};
 
 	const handleUpdate = async (formData) => {
@@ -31,9 +30,13 @@ export default function EditFormationPage() {
 			refreshFormation();
 			// Redirect to view page after brief delay
 			setTimeout(() => {
-				router.push(`/formations/view/${params.id}`);
+				router.push(`/formations/${params.id}`);
 			}, 1500);
 		}
+	};
+
+	const handleAdd3D = () => {
+		router.push(`/formations/${params.id}/content/3d/add`);
 	};
 
 	return (
@@ -42,7 +45,7 @@ export default function EditFormationPage() {
 				<div className="flex items-center justify-between">
 					<Button variant="ghost" onClick={handleBack}>
 						<ArrowLeft className="mr-2 h-4 w-4" />
-						Retour aux formations
+						Retour à la formation
 					</Button>
 				</div>
 
@@ -84,6 +87,26 @@ export default function EditFormationPage() {
 							isSaving={isUpdating}
 							isNew={false}
 						/>
+						
+						{/* Note informative pour les cours 3D */}
+						<Alert className="mt-6 bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+							<AlertDescription className="flex flex-col gap-4">
+								<p>
+									Pour gérer les cours 3D associés à cette formation, utilisez le bouton ci-dessous.
+									Rappel: une formation peut avoir au maximum 1 cours 3D.
+								</p>
+								<Button 
+									onClick={handleAdd3D} 
+									variant="outline" 
+									disabled={formation.builds3D?.length > 0}
+									className="self-start"
+								>
+									{formation.builds3D?.length > 0 
+										? "Cours 3D déjà associé" 
+										: "Ajouter un cours 3D"}
+								</Button>
+							</AlertDescription>
+						</Alert>
 					</>
 				) : (
 					<Alert variant="destructive">

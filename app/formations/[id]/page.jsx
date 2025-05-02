@@ -1,7 +1,6 @@
-//app/formations/view/[id]/page.jsx
+//app/formations/[id]/page.jsx
 "use client";
 
-import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, AlertTriangle, RefreshCcw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -12,37 +11,26 @@ import CurrentFormation3DModules from "@/components/formations/currentFormation/
 import CurrentFormationCourses from "@/components/formations/currentFormation/view/CurrentFormationCourses";
 import CurrentFormationDocumentation from "@/components/formations/currentFormation/view/CurrentFormationDocumentation";
 import CurrentFormationDeleteSection from "@/components/formations/currentFormation/view/CurrentFormationDeleteSection";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFormationDetails } from "@/lib/hooks/formations/currentFormation/useCurrentFormationDetails";
 import { useFormationActions } from "@/lib/hooks/formations/currentFormation/useCurrentFormationActions";
 
-export default function ViewFormationPage() {
+export default function FormationDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
-	const [activeTab, setActiveTab] = useState("overview");
-	const [formationId, setFormationId] = useState(null);
-
-	// Extraire l'ID de la formation des paramètres
-	useEffect(() => {
-		if (params?.id) {
-			console.log("Formation ID from params:", params.id);
-			setFormationId(params.id);
-		}
-	}, [params]);
 
 	// Utilisation des hooks personnalisés
 	const { formation, isLoading, error, refreshFormation } =
-		useFormationDetails(formationId);
-	const { deleteFormation } = useFormationActions(formationId);
+		useFormationDetails(params.id);
+	const { deleteFormation } = useFormationActions(params.id);
 
 	const handleBack = () => {
 		router.push("/formations");
 	};
-
+	
 	return (
 		<AdminLayout>
 			<div className="space-y-6">
-				<div className="flex items-center justify-between">
+				<div className="flex items-center">
 					<Button variant="ghost" onClick={handleBack}>
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						Retour aux formations
@@ -83,7 +71,7 @@ export default function ViewFormationPage() {
 
 							<div className="text-sm mt-2">
 								<p>Informations de débogage:</p>
-								<p>ID de formation: {formationId}</p>
+								<p>ID de formation: {params.id}</p>
 							</div>
 						</AlertDescription>
 					</Alert>
@@ -91,64 +79,28 @@ export default function ViewFormationPage() {
 					<div className="space-y-6">
 						<CurrentFormationOverview formation={formation} />
 
-						<Tabs
-							defaultValue="overview"
-							value={activeTab}
-							onValueChange={setActiveTab}
-						>
-							<TabsList className="w-full">
-								<TabsTrigger value="overview">
-									Vue d'ensemble
-								</TabsTrigger>
-								<TabsTrigger value="3d">
-									Modules 3D (
-									{formation.builds3D?.length || 0})
-								</TabsTrigger>
-								<TabsTrigger value="courses">
-									Cours ({formation.courses?.length || 0})
-								</TabsTrigger>
-								<TabsTrigger value="docs">
-									Documentation (
-									{formation.documentation?.length || 0})
-								</TabsTrigger>
-							</TabsList>
-
-							<TabsContent
-								value="overview"
-								className="space-y-6 mt-6"
-							>
-								<CurrentFormation3DModules
-									formation={formation}
-									isPreview={true}
-								/>
-								<CurrentFormationCourses
-									formation={formation}
-									isPreview={true}
-								/>
-								<CurrentFormationDocumentation
-									formation={formation}
-									isPreview={true}
-								/>
-							</TabsContent>
-
-							<TabsContent value="3d" className="mt-6">
+						<div className="space-y-8 mt-6">
+							<div>
+								<h2 className="text-xl font-semibold mb-4">Cours 3D ({formation.builds3D?.length || 0})</h2>
 								<CurrentFormation3DModules
 									formation={formation}
 								/>
-							</TabsContent>
-
-							<TabsContent value="courses" className="mt-6">
+							</div>
+							
+							<div>
+								<h2 className="text-xl font-semibold mb-4">Cours ({formation.courses?.length || 0})</h2>
 								<CurrentFormationCourses
 									formation={formation}
 								/>
-							</TabsContent>
-
-							<TabsContent value="docs" className="mt-6">
+							</div>
+							
+							<div>
+								<h2 className="text-xl font-semibold mb-4">Documentation ({formation.documentation?.length || 0})</h2>
 								<CurrentFormationDocumentation
 									formation={formation}
 								/>
-							</TabsContent>
-						</Tabs>
+							</div>
+						</div>
 
 						{/* Ajouter la section de suppression */}
 						<div className="pt-8 mt-8 border-t">

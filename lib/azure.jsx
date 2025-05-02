@@ -60,6 +60,8 @@ function extractBuildBaseName(blobName) {
 
 // Vérifier si un build Unity est complet (contient les 4 fichiers requis)
 function isUnityBuildComplete(buildFiles) {
+	console.log("isUnityBuildComplete: Vérification des fichiers", buildFiles.map(f => f.name));
+	
 	const requiredExtensions = [
 		".data.gz",
 		".framework.js.gz",
@@ -67,10 +69,17 @@ function isUnityBuildComplete(buildFiles) {
 		".wasm.gz",
 	];
 
-	// Vérifier que chaque extension requise est présente
-	return requiredExtensions.every((ext) =>
-		buildFiles.some((file) => file.name.endsWith(ext))
-	);
+	// Vérifier chaque extension requise
+	for (const ext of requiredExtensions) {
+		const found = buildFiles.some((file) => file.name.endsWith(ext));
+		console.log(`Extension ${ext}: ${found ? 'trouvée' : 'manquante'}`);
+		if (!found) {
+			return false;
+		}
+	}
+	
+	console.log("isUnityBuildComplete: Build complet");
+	return true;
 }
 
 // Récupérer la liste des builds dans un container
@@ -191,8 +200,44 @@ function getFileExtension(filename) {
 	return "";
 }
 
+// Nettoyer les métadonnées pour Azure Blob Storage
+function cleanMetadataForAzure(metadata) {
+    const cleanMetadata = {};
+    
+    // Azure n'accepte que des caractères alphanumériques dans les clés et valeurs des métadonnées
+    Object.entries(metadata).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+            return; // Ignorer les valeurs nulles/undefined
+        }
+        
+        // Convertir les valeurs en chaînes et remplacer les caractères non autorisés
+        let cleanKey = key.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+        let cleanValue = String(value).replace(/[^a-zA-Z0-9_. -]/g, "_");
+        
+        // Les clés doivent commencer par une lettre ou un chiffre
+        if (!/^[a-zA-Z0-9]/.test(cleanKey)) {
+            cleanKey = "x_" + cleanKey;
+        }
+        
+        // Vérifier la longueur (Azure a une limite)
+        if (cleanValue.length > 256) {
+            cleanValue = cleanValue.substring(0, 256);
+        }
+        
+        cleanMetadata[cleanKey] = cleanValue;
+    });
+    
+    return cleanMetadata;
+}
+
 // Uploader un nouveau build (version adaptée)
 export async function uploadUnityBuild(containerName, files, metadata = {}) {
+	console.log("azure.uploadUnityBuild: Début", {
+		containerName,
+		filesCount: files.length,
+		metadata
+	});
+	
 	const blobServiceClient = getBlobServiceClient();
 	const containerClient = blobServiceClient.getContainerClient(containerName);
 
@@ -203,24 +248,58 @@ export async function uploadUnityBuild(containerName, files, metadata = {}) {
 		".loader.js",
 		".wasm.gz",
 	];
-	const fileExtensions = files.map((file) =>
-		file.name.substring(file.name.lastIndexOf("."))
-	);
+	
+	// Afficher les noms de fichiers pour débogage
+	console.log("azure.uploadUnityBuild: Fichiers reçus:", files.map(f => f.name));
+	
+	const fileExtensions = [];
+	
+	// Vérification plus robuste des extensions
+	for (const file of files) {
+		const fileName = file.name;
+		console.log(`Analyse du fichier: ${fileName}`);
+		
+		// Chercher l'extension requise dans le nom de fichier
+		let matched = false;
+		for (const ext of requiredExtensions) {
+			if (fileName.endsWith(ext)) {
+				console.log(`-> Correspond à l'extension: ${ext}`);
+				fileExtensions.push(ext);
+				matched = true;
+				break;
+			}
+		}
+		
+		// Si aucune correspondance, utiliser l'extension classique
+		if (!matched) {
+			const lastDotIndex = fileName.lastIndexOf(".");
+			if (lastDotIndex !== -1) {
+				const ext = fileName.substring(lastDotIndex);
+				console.log(`-> Extension standard: ${ext}`);
+				fileExtensions.push(ext);
+			} else {
+				console.log("-> Aucune extension trouvée");
+				fileExtensions.push("");
+			}
+		}
+	}
+	
+	console.log("azure.uploadUnityBuild: Extensions détectées:", fileExtensions);
 
 	const missingFiles = requiredExtensions.filter(
-		(ext) =>
-			!fileExtensions.some(
-				(fileExt) => fileExt === ext || fileExt.endsWith(ext)
-			)
+		(ext) => !fileExtensions.includes(ext)
 	);
 
 	if (missingFiles.length > 0) {
+		console.error("azure.uploadUnityBuild: Extensions manquantes:", missingFiles);
 		throw new Error(
 			`Fichiers manquants pour un build Unity complet : ${missingFiles.join(
 				", "
 			)}`
 		);
 	}
+	
+	console.log("azure.uploadUnityBuild: Validation des fichiers réussie");
 
 	// Vérifier si le container existe, sinon le créer
 	const containerExists = await containerClient.exists();
@@ -252,19 +331,23 @@ export async function uploadUnityBuild(containerName, files, metadata = {}) {
 				blobName = `${basePath}${file.name}`;
 			}
 
-			const blockBlobClient =
-				containerClient.getBlockBlobClient(blobName);
+			const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+            // Préparer les métadonnées nettoyées pour Azure
+            const fileMetadata = cleanMetadataForAzure({
+                ...metadata,
+                originalname: file.name,
+                buildname: buildBaseName,
+            });
+            
+            console.log("Métadonnées nettoyées pour Azure:", fileMetadata);
 
 			// Options d'upload
 			const options = {
 				blobHTTPHeaders: {
 					blobContentType: file.type || "application/octet-stream",
 				},
-				metadata: {
-					...metadata,
-					originalName: file.name,
-					buildName: buildBaseName,
-				},
+				metadata: fileMetadata,
 			};
 
 			// Upload du fichier

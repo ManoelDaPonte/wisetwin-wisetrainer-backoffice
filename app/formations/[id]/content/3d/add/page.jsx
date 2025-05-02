@@ -1,0 +1,700 @@
+//app/formations/[id]/content/3d/add/page.jsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	Loader2,
+	AlertTriangle,
+	Upload,
+	Package,
+	HardDrive,
+	ArrowLeft,
+	Building,
+} from "lucide-react";
+import AdminLayout from "@/components/layout/AdminLayout";
+
+export default function AddExercise3DPage() {
+	const { id } = useParams();
+	const router = useRouter();
+
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [formation, setFormation] = useState(null);
+	const [containerBuilds, setContainerBuilds] = useState([]);
+	const [selectedBuild, setSelectedBuild] = useState(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [uploadFiles, setUploadFiles] = useState([]);
+	const [buildName, setBuildName] = useState("");
+	const [isUploading, setIsUploading] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState(0);
+	const [uploadError, setUploadError] = useState(null);
+	const [containerName, setContainerName] = useState(null);
+	const [activeTab, setActiveTab] = useState("existingBuild");
+
+	const handleBack = () => {
+		router.push(`/formations/${id}`);
+	};
+
+	// Charger les détails de la formation et déterminer le containerName
+	useEffect(() => {
+		async function fetchFormationDetails() {
+			try {
+				setIsLoading(true);
+				setError(null);
+				const response = await fetch(`/api/formations/${id}`);
+
+				if (!response.ok) {
+					throw new Error(
+						"Erreur lors du chargement de la formation"
+					);
+				}
+
+				const data = await response.json();
+				setFormation(data.formation);
+
+				// Si la formation a une organisation, utiliser son container
+				if (data.formation.organization) {
+					setContainerName(
+						data.formation.organization.azureContainer ||
+							`org-${data.formation.organization.id}`
+					);
+				} else {
+					// Si pas d'organisation, utiliser le container par défaut "wisetwin"
+					setContainerName("wisetwin");
+				}
+			} catch (err) {
+				console.error("Erreur:", err);
+				setError(err.message);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		fetchFormationDetails();
+	}, [id]);
+
+	// Charger les builds du container une fois le containerName défini
+	useEffect(() => {
+		if (!containerName) return;
+
+		async function fetchContainerBuilds() {
+			try {
+				setIsLoading(true);
+				const response = await fetch(
+					`/api/formations/${id}/builds/container?container=${containerName}`
+				);
+
+				if (!response.ok) {
+					throw new Error("Erreur lors du chargement des builds");
+				}
+
+				const data = await response.json();
+				
+				// Ne montrer QUE les builds qui sont dans le dossier wisetrainer/
+				let wisetrainerBuilds = data.builds.filter(
+					(build) => build.fullPath && build.fullPath.includes("wisetrainer/")
+				);
+				
+				// Si on ne trouve aucun build dans le dossier wisetrainer/, 
+				// vérifier s'il y en a à la racine qui devraient être déplacés
+				if (wisetrainerBuilds.length === 0) {
+					const rootWisetrainerBuilds = data.builds.filter(
+						(build) => !build.fullPath && build.name && (
+							build.name.toLowerCase().includes("wisetrainer") ||
+							build.name.toLowerCase().includes("zone") ||
+							build.name.toLowerCase().includes("logistique") ||
+							build.name.toLowerCase().includes("cariste")
+						)
+					);
+					
+					if (rootWisetrainerBuilds.length > 0) {
+						// Ajouter un message visible à l'utilisateur pour expliquer
+						setError("Certains builds WiseTrainer sont à la racine du container. Ils devraient être déplacés dans le dossier wisetrainer/.");
+						
+						console.log("Builds à la racine qui devraient être dans wisetrainer/:", 
+							rootWisetrainerBuilds.map(b => b.name)
+						);
+						
+						// On les montre quand même pour permettre de les utiliser
+						wisetrainerBuilds = rootWisetrainerBuilds;
+					}
+				}
+				
+				setContainerBuilds(wisetrainerBuilds);
+			} catch (err) {
+				console.error("Erreur:", err);
+				setError(err.message);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		fetchContainerBuilds();
+	}, [containerName, id]);
+
+	// Filtrer les builds par la recherche
+	const filteredBuilds = containerBuilds.filter(
+		(build) =>
+			build.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			(build.description &&
+				build.description
+					.toLowerCase()
+					.includes(searchQuery.toLowerCase()))
+	);
+
+	// Gérer le changement de fichiers
+	const handleFileChange = (e) => {
+		const selectedFiles = Array.from(e.target.files);
+		setUploadFiles(selectedFiles);
+
+		// Essayer de déterminer un nom de build basé sur les fichiers sélectionnés
+		if (selectedFiles.length > 0) {
+			const fileName = selectedFiles[0].name;
+			const baseName = fileName.split(".")[0]; // Prendre la partie avant le premier point
+			setBuildName(baseName);
+		}
+	};
+
+	// Vérifier si les fichiers requis sont présents
+	const hasRequiredFiles = () => {
+		if (uploadFiles.length < 4) {
+			console.log("Nombre de fichiers insuffisant:", uploadFiles.length);
+			return false;
+		}
+
+		const requiredExtensions = [
+			".data.gz",
+			".framework.js.gz",
+			".loader.js",
+			".wasm.gz",
+		];
+
+		// Vérification détaillée des fichiers
+		const fileExtensions = uploadFiles.map((file) => file.name);
+		console.log("Fichiers sélectionnés:", fileExtensions);
+
+		const missingExtensions = requiredExtensions.filter(
+			(ext) => !uploadFiles.some((file) => file.name.endsWith(ext))
+		);
+
+		if (missingExtensions.length > 0) {
+			console.log("Extensions manquantes:", missingExtensions);
+			return false;
+		}
+
+		return true;
+	};
+
+	// Uploader les fichiers
+	const uploadBuildFiles = async () => {
+		console.log("Début de l'upload avec", uploadFiles.length, "fichiers");
+
+		if (!hasRequiredFiles()) {
+			console.log("Vérification des fichiers échouée");
+			setUploadError(
+				"Il manque des fichiers requis pour un build Unity complet"
+			);
+			return;
+		}
+
+		// Vérifier le nom du build et le préfixer si nécessaire
+		let finalBuildName = buildName;
+		
+		// Si c'est un build wisetrainer mais qu'il ne commence pas par WiseTrainer_, 
+		// on le préfixe pour assurer la cohérence
+		if (!finalBuildName.startsWith("WiseTrainer_") && (
+			finalBuildName.toLowerCase().includes("zone") ||
+			finalBuildName.toLowerCase().includes("logistique") ||
+			finalBuildName.toLowerCase().includes("cariste")
+		)) {
+			finalBuildName = `WiseTrainer_${finalBuildName}`;
+			console.log("Nom du build automatiquement préfixé:", finalBuildName);
+		}
+
+		console.log("Vérification des fichiers réussie");
+		setIsUploading(true);
+		setUploadProgress(0);
+		setUploadError(null);
+
+		try {
+			// Création d'un FormData pour l'upload
+			const formData = new FormData();
+			uploadFiles.forEach((file) => {
+				console.log(
+					"Ajout au FormData:",
+					file.name,
+					file.type,
+					file.size
+				);
+				formData.append("files", file);
+			});
+
+			// Toujours utiliser le dossier wisetrainer/
+			const folderPath = "wisetrainer/";
+			
+			console.log("Paramètres d'upload:", {
+				buildName: finalBuildName,
+				formationId: id,
+				container: containerName,
+				folderPath: folderPath,
+			});
+
+			formData.append("buildName", finalBuildName);
+			formData.append("formationId", id);
+			formData.append("container", containerName);
+			formData.append("folderPath", folderPath);
+
+			// Upload des fichiers
+			console.log("Envoi de la requête d'upload...");
+			const response = await fetch(`/api/formations/upload-build`, {
+				method: "POST",
+				body: formData,
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				console.error("Erreur de réponse:", errorData);
+				throw new Error(errorData.error || "Erreur lors de l'upload");
+			}
+
+			console.log("Upload réussi, statut:", response.status);
+
+			const data = await response.json();
+			
+			// Associer automatiquement le build à la formation
+			// Utiliser le buildId au format "containerName:buildName" 
+			// qui est renvoyé par l'API dans data.buildId
+			await associateBuildToFormation(data.buildId);
+			
+		} catch (err) {
+			console.error("Erreur:", err);
+			setUploadError(err.message);
+			setIsUploading(false);
+		}
+	};
+
+	// Associer un build existant à la formation
+	const associateExistingBuild = async () => {
+		if (!selectedBuild) {
+			setError("Veuillez sélectionner un build");
+			return;
+		}
+		
+		await associateBuildToFormation(selectedBuild.id);
+	};
+	
+	// Fonction commune pour associer un build à la formation
+	const associateBuildToFormation = async (buildId) => {
+		try {
+			setIsLoading(true);
+			console.log("Associating build with ID:", buildId);
+
+			const response = await fetch(`/api/formations/${id}/content/3d`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					buildId: buildId,
+					modules: [], // Pas de modules initiaux
+					objectMapping: {}, // Pas de mapping initial
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(
+					errorData.error || "Erreur lors de l'association du build"
+				);
+			}
+
+			// Rediriger vers la page de visualisation de la formation
+			router.push(`/formations/${id}`);
+		} catch (err) {
+			console.error("Erreur:", err);
+			setError(err.message);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	if (isLoading) {
+		return (
+			<AdminLayout>
+				<div className="flex justify-center py-12">
+					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				</div>
+			</AdminLayout>
+		);
+	}
+
+	if (error) {
+		return (
+			<AdminLayout>
+				<div className="space-y-4">
+					<Button variant="ghost" onClick={handleBack}>
+						<ArrowLeft className="mr-2 h-4 w-4" />
+						Retour à la formation
+					</Button>
+
+					<Alert variant="destructive">
+						<AlertTriangle className="h-4 w-4" />
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				</div>
+			</AdminLayout>
+		);
+	}
+
+	return (
+		<AdminLayout>
+			<div className="space-y-6">
+				<div className="flex justify-between items-center">
+					<Button variant="ghost" onClick={handleBack}>
+						<ArrowLeft className="mr-2 h-4 w-4" />
+						Retour à la formation
+					</Button>
+				</div>
+
+				<h1 className="text-2xl font-bold tracking-tight">
+					Ajouter un cours 3D à {formation?.name}
+				</h1>
+
+				{/* Informations sur l'organisation et le container */}
+				<Alert className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+					<Building className="h-4 w-4 mr-2" />
+					<AlertDescription>
+						{formation?.organization ? (
+							<>
+								Recherche de builds dans le container{" "}
+								<strong>{containerName}</strong> lié à
+								l'organisation{" "}
+								<strong>{formation.organization.name}</strong>
+							</>
+						) : (
+							<>
+								Recherche de builds dans le container par défaut{" "}
+								<strong>{containerName}</strong>
+							</>
+						)}
+					</AlertDescription>
+				</Alert>
+				
+				<Alert className="bg-amber-50 text-amber-800 border-amber-200">
+					<AlertTriangle className="h-4 w-4 mr-2" />
+					<AlertDescription>
+						La configuration des modules et du mapping se fera après l'ajout du build, en cliquant sur "Configuration" depuis la page de détail de la formation.
+					</AlertDescription>
+				</Alert>
+
+				<Tabs
+					defaultValue="existingBuild"
+					value={activeTab}
+					onValueChange={setActiveTab}
+					className="w-full"
+				>
+					<TabsList className="grid grid-cols-2 w-full max-w-md mx-auto mb-6">
+						<TabsTrigger value="existingBuild">
+							<Package className="mr-2 h-4 w-4" />
+							Build existant
+						</TabsTrigger>
+						<TabsTrigger value="uploadNew">
+							<Upload className="mr-2 h-4 w-4" />
+							Uploader nouveau
+						</TabsTrigger>
+					</TabsList>
+
+					<TabsContent value="existingBuild">
+						<Card>
+							<CardHeader>
+								<CardTitle>
+									Sélectionner un build existant
+								</CardTitle>
+								<CardDescription>
+									Choisissez parmi les builds WiseTrainer
+									disponibles dans le dossier wisetrainer/
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-4">
+									<div>
+										<Label htmlFor="search">
+											Rechercher un build
+										</Label>
+										<Input
+											id="search"
+											placeholder="Rechercher par nom ou description..."
+											value={searchQuery}
+											onChange={(e) =>
+												setSearchQuery(
+													e.target.value
+												)
+											}
+										/>
+									</div>
+
+									<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+										{filteredBuilds.length > 0 ? (
+											filteredBuilds.map(
+												(build) => (
+													<Card
+														key={build.id}
+														className={`cursor-pointer hover:border-primary transition-colors ${
+															selectedBuild?.id ===
+															build.id
+																? "border-2 border-primary"
+																: ""
+														}`}
+														onClick={() =>
+															setSelectedBuild(
+																build
+															)
+														}
+													>
+														<CardHeader className="p-4">
+															<CardTitle className="text-base">
+																{
+																	build.name
+																}
+															</CardTitle>
+															<CardDescription className="text-xs">
+																{
+																	build.version
+																}
+															</CardDescription>
+														</CardHeader>
+														<CardContent className="p-4 pt-0">
+															<p className="text-xs text-muted-foreground">
+																{build.description ||
+																	"Aucune description"}
+															</p>
+															<p className="text-xs mt-2">
+																Taille:{" "}
+																{
+																	build.totalSize
+																}
+															</p>
+															<p className="text-xs">
+																Mis à
+																jour:{" "}
+																{
+																	build.uploadDate
+																}
+															</p>
+															{build.fullPath && (
+																<p className="text-xs text-blue-500">
+																	Dossier: {build.fullPath}
+																</p>
+															)}
+														</CardContent>
+													</Card>
+												)
+											)
+										) : (
+											<div className="col-span-full text-center py-6 text-muted-foreground">
+												<HardDrive className="h-12 w-12 mx-auto mb-2" />
+												<p>
+													Aucun build
+													WiseTrainer disponible
+												</p>
+											</div>
+										)}
+									</div>
+
+									{/* Vérifier si un cours 3D existe déjà */}
+									{formation.builds3D &&
+									formation.builds3D.length > 0 ? (
+										<Alert className="mt-4 bg-amber-50 border-amber-200 text-amber-800">
+											<AlertDescription>
+												Cette formation a déjà
+												un cours 3D associé.
+												L'ajout d'un nouveau
+												cours remplacera
+												l'existant.
+											</AlertDescription>
+										</Alert>
+									) : null}
+
+									{filteredBuilds.length > 0 && (
+										<Button
+											onClick={associateExistingBuild}
+											disabled={!selectedBuild}
+										>
+											Ajouter ce build à la formation
+										</Button>
+									)}
+								</div>
+							</CardContent>
+						</Card>
+					</TabsContent>
+
+					<TabsContent value="uploadNew">
+						<Card>
+							<CardHeader>
+								<CardTitle>
+									Uploader un nouveau build
+								</CardTitle>
+								<CardDescription>
+									Sélectionnez les 4 fichiers requis
+									pour votre build Unity WebGL
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-4">
+									<div>
+										<Label htmlFor="buildName">
+											Nom du build
+										</Label>
+										<Input
+											id="buildName"
+											placeholder="Nom du build..."
+											value={buildName}
+											onChange={(e) =>
+												setBuildName(
+													e.target.value
+												)
+											}
+										/>
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="files">
+											Fichiers du build
+										</Label>
+										<div className="border-2 border-dashed rounded-md p-6 text-center">
+											<Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+											<p className="text-sm mb-2">
+												Glisser-déposer ou
+												cliquer pour
+												sélectionner les
+												fichiers
+											</p>
+											<p className="text-xs text-muted-foreground mb-4">
+												Fichiers requis:
+												.data.gz,
+												.framework.js.gz,
+												.loader.js, .wasm.gz
+											</p>
+											<Input
+												id="files"
+												type="file"
+												multiple
+												className="hidden"
+												onChange={
+													handleFileChange
+												}
+											/>
+											<Button
+												variant="outline"
+												onClick={() =>
+													document
+														.getElementById(
+															"files"
+														)
+														.click()
+												}
+											>
+												Sélectionner des
+												fichiers
+											</Button>
+										</div>
+									</div>
+
+									{uploadFiles.length > 0 && (
+										<div>
+											<Label>
+												Fichiers sélectionnés
+											</Label>
+											<ul className="space-y-1 mt-2">
+												{uploadFiles.map(
+													(file, index) => (
+														<li
+															key={index}
+															className="text-sm flex justify-between"
+														>
+															<span>
+																{
+																	file.name
+																}
+															</span>
+															<span className="text-muted-foreground">
+																{(
+																	file.size /
+																	(1024 *
+																		1024)
+																).toFixed(
+																	2
+																)}{" "}
+																MB
+															</span>
+														</li>
+													)
+												)}
+											</ul>
+										</div>
+									)}
+
+									{/* Vérifier si un cours 3D existe déjà */}
+									{formation.builds3D &&
+									formation.builds3D.length > 0 ? (
+										<Alert className="mt-4 bg-amber-50 border-amber-200 text-amber-800">
+											<AlertDescription>
+												Cette formation a déjà
+												un cours 3D associé.
+												L'ajout d'un nouveau
+												cours remplacera
+												l'existant.
+											</AlertDescription>
+										</Alert>
+									) : null}
+
+									{uploadError && (
+										<Alert variant="destructive">
+											<AlertTriangle className="h-4 w-4" />
+											<AlertDescription>
+												{uploadError}
+											</AlertDescription>
+										</Alert>
+									)}
+
+									<Button
+										onClick={uploadBuildFiles}
+										disabled={
+											!hasRequiredFiles() ||
+											!buildName ||
+											isUploading
+										}
+										className="w-full"
+									>
+										{isUploading ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												Upload en cours...{" "}
+												{uploadProgress}%
+											</>
+										) : (
+											"Uploader et ajouter à la formation"
+										)}
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					</TabsContent>
+				</Tabs>
+			</div>
+		</AdminLayout>
+	);
+}

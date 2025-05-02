@@ -52,7 +52,7 @@ export default function FormationOverview({ formation }) {
 	const formattedUpdatedAt = new Date(updatedAt).toLocaleDateString("fr-FR");
 
 	const handleEdit = () => {
-		router.push(`/formations/edit/${id}`);
+		router.push(`/formations/${id}/edit`);
 	};
 
 	return (
